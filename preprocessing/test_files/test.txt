@@ -1,0 +1,11 @@
+@DEFINE my_int int
+@DEFINE second_macro 2
+@DEFINE test test_second
+
+second_macro
+
+File!
+
+@DEFINE my_int again
+
+newline
