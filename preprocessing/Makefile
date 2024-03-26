@@ -1,22 +1,27 @@
-# OCaml compiler
+# Compiler
 OCAMLC = ocamlc
 
-# Flags for the compiler
-OCAMLCFLAGS = -g -w +A-4-9-41-42-44-45-48
+# Flags
+OCAMLFLAGS = -g -w +A-4-9-41-42-44-45-48
 
 # Source files
-SRCS = macros.ml indents.ml
+SOURCES = macros.ml indents.ml main.ml
 
-# Executables
-BINS = $(patsubst %.ml,%,$(SRCS))
+# Object files
+OBJECTS = $(SOURCES:.ml=.cmo)
 
-# Default rule
-all: $(BINS)
+# Executable name
+EXEC = main
 
-# Rule to build each executable
-%: %.ml
-	$(OCAMLC) $(OCAMLCFLAGS) -o $@ $<
+.PHONY: all clean
 
-# Clean rule
+all: clean $(EXEC)
+
+$(EXEC): $(OBJECTS)
+	$(OCAMLC) $(OCAMLFLAGS) -o $@ $(OBJECTS)
+
+%.cmo: %.ml
+	$(OCAMLC) $(OCAMLFLAGS) -c $<
+
 clean:
-	rm -f *.cmo *.cmi $(BINS)
+	rm -f $(OBJECTS) $(EXEC)
