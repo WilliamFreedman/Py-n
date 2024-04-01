@@ -52,7 +52,7 @@ program_rule:
 
 block_list:
 	/* nothing */ { [] }
-	| block block_list {$1 :: $2}  
+	| block NEWLINE block_list {$1 :: $2}  
 
 block:
 	| declaration {$1}
@@ -90,24 +90,43 @@ assignment:
 	| identifier LSHIFTASSIGN expr {Assign {$1, $3}}
 
 class_definition:
-	| CLASS identifier (identifier|ε): NEWLINE INDENT block* DEDENT
-	| CLASS identifier (identifier|ε) implements (identifier+): NEWLINE INDENT block* DEDENT
+	| CLASS identifier LPAREN identifier RPAREN COLON NEWLINE INDENT block_list DEDENT
+	| CLASS identifier LPAREN RPAREN COLON NEWLINE INDENT block_list DEDENT
+	| CLASS identifier LPAREN identifier RPAREN implements LPAREN identifier_list RPAREN COLON NEWLINE INDENT block_list DEDENT
+	| CLASS identifier LPAREN RPAREN implements LPAREN identifier_list RPAREN COLON NEWLINE INDENT block_list DEDENT
+
+identifier_list:
+	identifier
+	|identifier COMMA identifier_list
+
 
 interface_definition:
-	INTERFACE identifier COLON NEWLINE INDENT func_header* DEDENT
+	INTERFACE identifier COLON NEWLINE INDENT func_header_list DEDENT
+
+func_header_list:
+	func_header
+	| func_header_list NEWLINE func_header
 
 func_header:
-	| DEF identifier identifier LPAREN identifier COMMA * identifier RPAREN
+	| DEF identifier identifier LPAREN args_list RPAREN ARROW IDENTIFIER
 	| DEF identifier identifier RPAREN LPAREN
 
 conditional:
-	| IF value COLON NEWLINE INDENT block+ DEDENT (else_block | ε)
-	| IF value COLON NEWLINE INDENT block+ DEDENT elif_block (else_block | ε)
+	| IF value COLON NEWLINE INDENT block_list DEDENT else_block
+	| IF value COLON NEWLINE INDENT block_list DEDENT
+	| IF value COLON NEWLINE INDENT block_list DEDENT elif_block else_block
+	| IF value COLON NEWLINE INDENT block_list DEDENT elif_block
+
+
 
 elif_block:
-	| ELIF expr: NEWLINE INDENT block+ DEDENT elif_block* (else_block | ε)
+	ELIF expr: NEWLINE INDENT block_list DEDENT elif_block else_block
+	| ELIF expr: NEWLINE INDENT block_list DEDENT else_block
+	| ELIF expr: NEWLINE INDENT block_list DEDENT elif_block
+	| ELIF expr: NEWLINE INDENT block_list DEDENT
+
 else_block:
-	| ELSE: NEWLINE INDENT block+ DEDENT
+	| ELSE: NEWLINE INDENT block_list DEDENT
 
 while_loop:
 	| WHILE expr COLON NEWLINE INDENT block_list DEDENT {While {$2, $6} }
@@ -117,11 +136,17 @@ for_loop:
 	| FOR identifier IN value NEWLINE INDENT block_list DEDENT {For {$2, $4, $7}}
 
 function_definition:
-	| DEF identifier LPAREN args RPAREN ARROW type COLON NEWLINE INDENT block+ RETURN value DEDENT
+	| DEF identifier LPAREN args RPAREN ARROW type COLON NEWLINE INDENT block_list RETURN value DEDENT
 
 args:
-	| ε
-	| (expr COLON identifier COMMA )* expr COLON identifier
+	| LPAREN args_list RPAREN
+
+args_list:
+	arg COMMA args_list
+	| arg
+
+arg:
+	identifier COLON identifier
 
 function_call:
 	| identifier LPAREN args RPAREN
@@ -141,12 +166,14 @@ list:
 
 list_literal:
 LBRACK list_contents RBRACK
-LBRACKist_contents:
-R	| ε
-	| (value COMMA)* + value
+
+list_contents:
+	| value
+	| list_contents COMMA value
 
 list_comprehension:
-	| LBRACK value FOR identifier IN value IF value? RBRACK
+	LBRACK value FOR identifier IN value RBRACK
+	|LBRACK value FOR identifier IN value IF value RBRACK
 
 //Dict 
 

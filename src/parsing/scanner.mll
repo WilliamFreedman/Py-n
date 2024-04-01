@@ -9,6 +9,7 @@ let alphabet = ['a'-'z' 'A'-'Z' '0'-'9' '!' '@' '#' '$' '%' '^' '&' '*' '(' ')' 
 rule tokenize = parse
   [' ' '\t' '\r'] { tokenize lexbuf }
 | '\n' { NEWLINE }
+| "->" { ARROW }
 | '+' { PLUS }
 | '-' { MINUS }
 | '*' { TIMES }
