@@ -55,25 +55,25 @@ block_list:
 	| block block_list {$1 :: $2}  
 
 block:
-	| declaration
-  	| assignment
-	| class_definition
-	| interface_definition
-	| conditional
-	| assert
-	| while_loop
-	| for_loop
-	| BREAK
-	| CONTINUE
-	| PASS
-	| function_definition
-	| function_call
+	| declaration {$1}
+  	| assignment {$1}
+	| class_definition {$1}
+	| interface_definition {$1}
+	| conditional {$1}
+	| assert {$1}
+	| while_loop {$1}
+	| for_loop {$1}
+	| BREAK { Break }
+	| CONTINUE { Continue }
+	| PASS { Pass }
+	| function_definition {$1}
+	| function_call {$1}
 
 declaration:
-	| identifier COLON identifier EQUALS expr
-	| identifier COLON identifier
+	| identifier COLON identifier EQUALS expr { {$3, $1} } (* Needs to be fixed *)
+	| identifier COLON identifier { {$3, $1}}
 
-(* TODO: Implement the nonstandard assigns *)
+(* TODO: Implement the nonstandard assigns probably later on *)
 assignment:
 	| identifier ASSIGN expr {Assign {$1, $3}}
 	| identifier PLUSASSIGN expr {Assign {$1, $3}}
@@ -110,10 +110,11 @@ else_block:
 	| ELSE: NEWLINE INDENT block+ DEDENT
 
 while_loop:
-	| while expr: NEWLINE INDENT block+ DEDENT
+	| WHILE expr COLON NEWLINE INDENT block_list DEDENT {While {$2, $6} }
 
+(* Value doesn't exist right now *)
 for_loop:
-	| for identifier in value NEWLINE INDENT block* DEDENT
+	| FOR identifier IN value NEWLINE INDENT block_list DEDENT {For {$2, $4, $7}}
 
 function_definition:
 	| DEF identifier LPAREN args RPAREN ARROW type COLON NEWLINE INDENT block+ RETURN value DEDENT
@@ -162,35 +163,11 @@ dict_comprehension:
 	| LBRACK expr:value FOR identifier IN value (IF value)? RBRACK
 
 
-
-LBRACK
-R// program_rule:
-//   vdecl_list_rule stmt_list_rule EOF { {locals=$1; body=$2} }
-// x:int,y:int,z:int = 1,2,3?
-// vdecl_list_rule:
-//   /*nothing*/                   { []       }
-//   | vdecl_rule vdecl_list_rule  { $1 :: $2 }
-
-// vdecl_rule:
-//   typ_rule ID SEMI { ($1, $2) }
-
-// vdecl_rule:
-// 	VARIABLE COLON typ_rule NEWLINE { ($3, $1) }
-
-
-// typ_rule:
-//   INT       { Int  }
-//   | BOOL    { Bool }
-
-// stmt_list_rule:
-//     /* nothing */               { []     }
-//     | stmt_rule stmt_list_rule  { $1::$2 }
-
-stmt_rule:
-  expr_rule NEWLINE                                        { Expr $1         }
-//   | LBRACE stmt_list_rule RBRACE                          { Block $2        }
-  | IF LPAREN expr_rule RPAREN stmt_rule ELSE stmt_rule   { If ($3, $5, $7) }
-  | WHILE LPAREN expr_rule RPAREN stmt_rule               { While ($3,$5)   }
+// stmt_rule:
+//   expr_rule NEWLINE                                        { Expr $1         }
+// //   | LBRACE stmt_list_rule RBRACE                          { Block $2        }
+//   | IF LPAREN expr_rule RPAREN stmt_rule ELSE stmt_rule   { If ($3, $5, $7) }
+//   | WHILE LPAREN expr_rule RPAREN stmt_rule               { While ($3,$5)   }
 
 expr_rule:
   | BOOLLIT                       { BoolLit $1            }

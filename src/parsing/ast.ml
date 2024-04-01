@@ -9,17 +9,16 @@ type expr =
   | Binop of expr * bop * expr
   | Assign of string * expr
 
-type stmt =
-  | Block of stmt list
+type block =
   | Expr of expr
-  | If of expr * stmt * stmt
-  | While of expr * stmt
+  | If of expr * block * block
+  | While of expr * block
+  | For of expr * expr * block
 
 type bind = typ * string
 
 type program = {
-  locals: bind list;
-  body: stmt list;
+  body: block list;
 }
 
 
