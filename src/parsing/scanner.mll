@@ -67,8 +67,6 @@ rule tokenize = parse
 | "for" { FOR }
 | "interface" { INTERFACE }
 | "class" { CLASS }
-| "True"  { TRUE  }
-| "False" { FALSE }
 | "None" { NONE }
 | "INDENT" { INDENT }
 | "int" { INT }
@@ -78,6 +76,8 @@ rule tokenize = parse
 | "and" { AND } 
 | "or" {OR}
 | "DEDENT" { DEDENT }
+| "True"  { BOOLLIT(true) }
+| "False" { BOOLLIT(false) }
 | ['+' '-']? ('0'|(['1'-'9'] digits*))? '.' digits* (['e' 'E'] ['+' '-']? digits+)? as lit { FLOATLIT(float_of_string lit) }
 | ['+' '-']? ('0'|(['1'-'9'] digits*)) ['e' 'E'] ['+' '-']? digits+ as lit { FLOATLIT(float_of_string lit) }
 | ['+' '-']? ('0'|['1'-'9'] digits*) as lit { INTLIT(int_of_string lit) }
@@ -87,11 +87,13 @@ rule tokenize = parse
 | eof { EOF }
 
 {
-let buf = Lexing . from_channel stdin in
-let f = tokenize buf in
-print_endline f
+    let lexbuf = Lexing.from_channel stdin in
+    try
+        while true do
+            ignore (tokenize lexbuf)
+        done
+    with _ -> exit 0
 }
-
 (*
 rule lex_float = parse
    | digit+('E'|'e')('+'|'-')?digit+ as out {out}
