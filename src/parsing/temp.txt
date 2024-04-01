@@ -1,0 +1,25 @@
+
+program:
+	| (block NEWLINE)+ EOF
+
+block:
+	| declaration
+	| assignment
+	| class_definition
+	| interface_definition
+	| conditional
+	| assert
+	| while_loop
+	| for_loop
+	| BREAK
+	| CONTINUE
+	| PASS
+	| type_alias
+	| function_definition
+	| function_call
+	
+expr:
+	| identifier
+	| simple_literal
+	| iterable
+	| function_call
