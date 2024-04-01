@@ -55,8 +55,8 @@ block_list:
 	| block block_list {$1 :: $2}  
 
 block:
-	| declaration;
-  	| assignment; 
+	| declaration
+  	| assignment
 	| class_definition
 	| interface_definition
 	| conditional
