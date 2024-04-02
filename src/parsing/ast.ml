@@ -1,7 +1,7 @@
 type bop = Add | Sub | Eq | Neq | Less | And | Or (**| ArrayGet **)
 
 (** Types in our language **)
-type typevar = Int | Bool | String | TypeVariable of string
+type typevar = TypeVariable of string
 
 (** Indicates a variable **)
 type variable = Var of string
@@ -32,28 +32,23 @@ type expr =
   | Assign of variable * special_assignment * expr
   (** | Return of expr **)
 
-type stmt =
-  VarAssign of typevar * variable * expr
-  | VarDec of typevar * variable
+type block =
+    BlockAssign of variable * special_assignment * expr
   | Break
   | Continue
   | Pass
-  | StmtExpr of expr (** Mostly for assignment expressions (w/ no type decl) **)
+  | VarDec of typevar * variable * expr (** Mostly for assignment expressions (w/ no type decl) **)
   | Return of expr
+  (**| If of expr * block * block **)
+  | While of expr * block list
+  | For of expr * expr * block list
 
 (** A block can be a sequence of statements, an if ... elif ... else, or a loop **)
-type block =
-  | Expr of expr
-  | If of expr * block * block
-  | While of expr * block
-  | For of expr * expr * block
+
 
 (** type bind = typ * string **)
 
-type program = {
-  body: block list;
-}
-
+type program = block list
 
 (* Pretty-printing functions *)
 let string_of_op = function
@@ -65,14 +60,30 @@ let string_of_op = function
   | And -> "&&"
   | Or -> "||"
 
+let string_of_special_assignment = function
+IdentityAssign -> "="
+  | PlusAssign -> "+="
+  | MinusAssign -> "-=" 
+  | TimesAssign -> "*="
+  | DivideAssign -> "/="
+  | FloorDivAssign -> "//="
+  | ExpAssign -> "**="
+  | AndAssign -> "&="
+  | OrAssign -> "|="
+  | XorAssign -> "^=" 
+  | RShiftAssign -> ">>="
+  | LShiftAssign -> "<<="
+  | ModAssign -> "%="
+  
 let rec string_of_expr = function
     IntLit(l) -> string_of_int l
   | BoolLit(true) -> "true"
   | BoolLit(false) -> "false"
-  | FloatLit(f) -> string_of_float
+  | FloatLit(f) -> string_of_float f
+  | StringLit(s) -> s
   | Binop(e1, o, e2) ->
     string_of_expr e1 ^ " " ^ string_of_op o ^ " " ^ string_of_expr e2
-  | Assign(Var(v), e) -> v ^ " = " ^ string_of_expr e
+  | Assign(Var(v), assign_type, e) -> v ^ string_of_special_assignment assign_type ^ string_of_expr e
   | VarExpr(Var(v)) -> v
 
 (**
@@ -86,11 +97,7 @@ let rec string_of_stmt = function
   **)
 
 let string_of_typevar = function
-    Int -> "int"
-  | Bool -> "bool"
-  | Float -> "float"
-  | Str -> "str"
-  | TypeVariable(v) -> v
+  TypeVariable(v) -> v
 
 (**
 let string_of_vdecl (t, id) = string_of_typ t ^ " " ^ id ^ ";\n"
