@@ -48,7 +48,9 @@ type block =
 
 (** type bind = typ * string **)
 
-type program = block list
+type program = {
+  body: block list
+}
 
 (* Pretty-printing functions *)
 let string_of_op = function
@@ -77,8 +79,8 @@ IdentityAssign -> "="
   
 let rec string_of_expr = function
     IntLit(l) -> string_of_int l
-  | BoolLit(true) -> "true"
-  | BoolLit(false) -> "false"
+  | BoolLit(true) -> "True"
+  | BoolLit(false) -> "False"
   | FloatLit(f) -> string_of_float f
   | StringLit(s) -> s
   | Binop(e1, o, e2) ->
@@ -86,25 +88,27 @@ let rec string_of_expr = function
   | Assign(Var(v), assign_type, e) -> v ^ string_of_special_assignment assign_type ^ string_of_expr e
   | VarExpr(Var(v)) -> v
 
-(**
-let rec string_of_stmt = function
-    Block(stmts) ->
-    "{\n" ^ String.concat "" (List.map string_of_stmt stmts) ^ "}\n"
-  | Expr(expr) -> string_of_expr expr ^ ";\n";
-  | If(e, s1, s2) ->  "if (" ^ string_of_expr e ^ ")\n" ^
+
+let rec string_of_block = function
+  BlockAssign(Var(v_string), spec_assign, expr) -> 
+  v_string ^ " " ^ string_of_special_assignment spec_assign ^ " " ^ string_of_expr expr ^ "\n"
+  | VarDec(TypeVariable(t_string), Var(v_string), expr) ->
+  v_string ^ ": " ^ t_string ^ " = " ^ string_of_expr expr ^ "\n"
+  | _ -> "x_x"
+  (* "\n" ^ String.concat "" (List.map string_of_block stmts) ^ "}\n" *)
+  (* | Expr(expr) -> string_of_expr expr ^ ";\n"; *)
+  (* | If(e, s1, s2) ->  "if (" ^ string_of_expr e ^ ")\n" ^
                       string_of_stmt s1 ^ "else\n" ^ string_of_stmt s2
-  | While(e, s) -> "while (" ^ string_of_expr e ^ ") " ^ string_of_stmt s
-  **)
+  | While(e, s) -> "while (" ^ string_of_expr e ^ ") " ^ string_of_stmt s *)
 
 let string_of_typevar = function
   TypeVariable(v) -> v
 
-(**
-let string_of_vdecl (t, id) = string_of_typ t ^ " " ^ id ^ ";\n"
+(* 
+let string_of_vdecl (t, id) = string_of_typ t ^ " " ^ id ^ ";\n" *)
 
 let string_of_program fdecl =
   "\n\nParsed program: \n\n" ^
-  String.concat "" (List.map string_of_vdecl fdecl.locals) ^
-  String.concat "" (List.map string_of_stmt fdecl.body) ^
+  String.concat "" (List.map string_of_block fdecl.body) ^
   "\n"
-  **)
+

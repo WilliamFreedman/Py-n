@@ -85,10 +85,10 @@ rule tokenize = parse
 | ['+' '-']? ('0'|['1'-'9'] digits*) as lit { INTLIT(int_of_string lit) }
 | '\"'alphabet*'\"' as lit { STRINGLIT(lit) }
 | '\''alphabet*'\'' as lit { STRINGLIT(lit) }
-| ['a'-'z''A'-'Z''_']+['a'-'z''A'-'Z''_' '0'-'9']+ as id { VARIABLE(id) }
+| ['a'-'z''A'-'Z''_']+['a'-'z''A'-'Z''_' '0'-'9']* as id { VARIABLE(id) }
 | eof { EOF }
 
-{
+(* {
     let lexbuf = Lexing.from_channel stdin in
     try
         while true do
@@ -96,7 +96,7 @@ rule tokenize = parse
         done
     with _ -> exit 0
 }
-(*
+(* *)
 rule lex_float = parse
    | digit+('E'|'e')('+'|'-')?digit+ as out {out}
    | digit+'.' as out {out}

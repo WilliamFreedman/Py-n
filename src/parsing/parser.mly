@@ -54,7 +54,7 @@ open Ast
 // ArrayGet identifier expr
 
 program_rule:
-    block_list EOF { $1 }
+    block_list EOF { {body=$1}  }
 
 block_list:
 	/* nothing */               { [] }
@@ -76,23 +76,30 @@ block:
 	(** | function_call {$1} **)
 
 declaration:
-    VARIABLE COLON VARIABLE ASSIGN expr { VarDec(TypeVariable($3), Var($1), $5) } 
+    VARIABLE COLON typename ASSIGN expr { VarDec($3, Var($1), $5) } 
 	(*| VARIABLE COLON VARIABLE { VarDec(TypeVariable($3), Var($1)) }*)
+	
+typename:
+	INT	{ TypeVariable("int") }
+	| BOOL { TypeVariable("bool") }
+	| FLOAT { TypeVariable("float") }
+	| STR { TypeVariable("str") }
+  	| VARIABLE { TypeVariable($1) }
 
 assignment:
-    VARIABLE ASSIGN expr    			{ BlockAssign(Var($1), IdentityAssign, $3) }
+    VARIABLE ASSIGN expr    		{ BlockAssign(Var($1), IdentityAssign, $3) }
 	| VARIABLE PLUSASSIGN expr 		{ BlockAssign(Var($1), PlusAssign,     $3) }
-	| VARIABLE MINUSASSIGN expr 		{ BlockAssign(Var($1), MinusAssign,    $3) }
-	| VARIABLE TIMESASSIGN expr 		{ BlockAssign(Var($1), TimesAssign,    $3) }
+	| VARIABLE MINUSASSIGN expr 	{ BlockAssign(Var($1), MinusAssign,    $3) }
+	| VARIABLE TIMESASSIGN expr 	{ BlockAssign(Var($1), TimesAssign,    $3) }
 	| VARIABLE EXPASSIGN expr 		{ BlockAssign(Var($1), ExpAssign,      $3) }
-	| VARIABLE DIVIDEASSIGN expr 		{ BlockAssign(Var($1), DivideAssign,   $3) }
+	| VARIABLE DIVIDEASSIGN expr 	{ BlockAssign(Var($1), DivideAssign,   $3) }
 	| VARIABLE FLOORDIVASSIGN expr 	{ BlockAssign(Var($1), FloorDivAssign,  $3) }
 	| VARIABLE MODASSIGN expr 		{ BlockAssign(Var($1), ModAssign,      $3) }
 	| VARIABLE ANDASSIGN expr 		{ BlockAssign(Var($1), AndAssign,      $3) }
-	| VARIABLE ORASSIGN expr 			{ BlockAssign(Var($1), OrAssign,       $3) }
+	| VARIABLE ORASSIGN expr 		{ BlockAssign(Var($1), OrAssign,       $3) }
 	| VARIABLE XORASSIGN expr 		{ BlockAssign(Var($1), XorAssign,      $3) }
-	| VARIABLE RSHIFTASSIGN expr 		{ BlockAssign(Var($1), RShiftAssign,   $3) }
-	| VARIABLE LSHIFTASSIGN expr 		{ BlockAssign(Var($1), LShiftAssign,   $3) }
+	| VARIABLE RSHIFTASSIGN expr 	{ BlockAssign(Var($1), RShiftAssign,   $3) }
+	| VARIABLE LSHIFTASSIGN expr 	{ BlockAssign(Var($1), LShiftAssign,   $3) }
 
 (** TODO: Update AST to implement actions for class definitions **)
 (**
