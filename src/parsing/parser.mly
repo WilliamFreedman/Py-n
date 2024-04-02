@@ -76,7 +76,7 @@ block:
 	(** | function_call {$1} **)
 
 declaration:
-    VARIABLE COLON typename EQ expr { VarAssign($3, Var($1), $5) } 
+    VARIABLE COLON typename ASSIGN expr { VarAssign($3, Var($1), $5) } 
 	| VARIABLE COLON typename { VarDec($3, Var($1)) }
 
 (** Typenames - standard types + user defined ones (via classes) **)
@@ -235,18 +235,19 @@ stmt_rule:
     | IF LPAREN expr_rule RPAREN stmt_rule ELSE stmt_rule   { If ($3, $5, $7) }
     | WHILE LPAREN expr_rule RPAREN stmt_rule               { While ($3,$5)   }
 **)
-(**
-expr_rule:
-    BOOLLIT                       { BoolLit $1            }
-    | INTLIT                        { IntLit $1            }
-    | VARIABLE                      { Id $1                 }
-    | expr_rule PLUS expr_rule      { Binop ($1, Add, $3)   }
-    | expr_rule MINUS expr_rule     { Binop ($1, Sub, $3)   }
-    | expr_rule EQ expr_rule        { Binop ($1, Equal, $3) }
-    | expr_rule NEQ expr_rule       { Binop ($1, Neq, $3)   }
-    | expr_rule LT expr_rule        { Binop ($1, Less, $3)  }
-    | expr_rule AND expr_rule       { Binop ($1, And, $3)   }
-    | expr_rule OR expr_rule        { Binop ($1, Or, $3)    }
-    | VARIABLE ASSIGN expr_rule     { Assign ($1, $3)       }
-    | LPAREN expr_rule RPAREN       { $2                    }
-    **)
+
+expr:
+    BOOLLIT                         { BoolLit($1)           }
+    | INTLIT                        { IntLit($1)            }
+    | FLOATLIT                      { FloatLit($1)          }
+    | STRINGLIT                     { StringLit($1)         }
+    | VARIABLE                      { VarExpr(Var($1))      }
+    | expr PLUS expr                { Binop($1, Add, $3)    }
+    | expr MINUS expr               { Binop($1, Sub, $3)    }
+    | expr EQ expr                  { Binop($1, Eq, $3)  }
+    | expr NEQ expr                 { Binop($1, Neq, $3)    }
+    | expr LT expr                  { Binop($1, Less, $3)   }
+    | expr AND expr                 { Binop($1, And, $3)    }
+    | expr OR expr                  { Binop($1, Or, $3)     }
+    | VARIABLE ASSIGN expr          { Assign($1, $3)        }
+    | LPAREN expr RPAREN            { $2                    }
