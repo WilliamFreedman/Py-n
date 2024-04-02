@@ -9,6 +9,11 @@ type expr =
   | Binop of expr * bop * expr
   | Assign of string * expr
   | Return of expr
+  | VarAssign of typ * string * expr
+  | VarDec of typ * string
+  | Break
+  | Continue
+  | Pass
 
 type block =
   | Expr of expr

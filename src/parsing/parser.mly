@@ -73,8 +73,8 @@ block:
 	| function_call {$1}
 
 declaration:
-	| identifier COLON identifier EQUALS expr { {$3, $1} } (* Needs to be fixed *)
-	| identifier COLON identifier { {$3, $1}}
+	| identifier COLON identifier EQUALS expr { VarAssign{$3, $1, $5} } 
+	| identifier COLON identifier { VarDec{$3, $1}}
 
 (* TODO: Implement the nonstandard assigns probably later on *)
 assignment:
@@ -99,8 +99,8 @@ class_definition:
 	| CLASS identifier LPAREN RPAREN implements LPAREN identifier_list RPAREN COLON NEWLINE INDENT block_list DEDENT
 
 identifier_list:
-	identifier
-	|identifier COMMA identifier_list
+	identifier { $1 }
+	|identifier COMMA identifier_list { $1 :: $3}
 
 interface_definition:
 	INTERFACE identifier COLON NEWLINE INDENT func_header_list DEDENT
@@ -121,13 +121,13 @@ conditional:
 
 
 elif_block:
-	ELIF expr: NEWLINE INDENT block_list DEDENT elif_block else_block
-	| ELIF expr: NEWLINE INDENT block_list DEDENT else_block
-	| ELIF expr: NEWLINE INDENT block_list DEDENT elif_block
-	| ELIF expr: NEWLINE INDENT block_list DEDENT
+	ELIF expr COLON NEWLINE INDENT block_list DEDENT elif_block else_block
+	| ELIF expr COLON NEWLINE INDENT block_list DEDENT else_block
+	| ELIF expr COLON NEWLINE INDENT block_list DEDENT elif_block
+	| ELIF expr COLON NEWLINE INDENT block_list DEDENT
 
 else_block:
-	| ELSE: NEWLINE INDENT block_list DEDENT
+	| ELSE COLON NEWLINE INDENT block_list DEDENT {Else {}}
 
 while_loop:
 	| WHILE expr COLON NEWLINE INDENT block_list DEDENT {While {$2, $6} }
@@ -166,7 +166,7 @@ list:
 	| list_comprehension
 
 list_literal:
-LBRACK list_contents RBRACK
+	LBRACK list_contents RBRACK
 
 list_contents:
 	| value
@@ -183,7 +183,8 @@ dict:
 	| dict_comprehension
 
 dict_literal:
-LBRACE dict_contents RBRACE
+	LBRACE dict_contents RBRACE
+
 dict_contents:
 	| ε
 	| value COLON value,* value COLON expr
