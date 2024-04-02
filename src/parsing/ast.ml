@@ -1,6 +1,10 @@
 type bop = Add | Sub | Equal | Neq | Less | And | Or | ArrayGet
 
-type typ = Int | Bool | String | TypeVariable of string
+(** Types in our language **)
+type typevar = Int | Bool | String | TypeVariable of string
+
+(** Indicates a variable **)
+type variable = Var of string
 
 type expr =
   | IntLit of int
@@ -9,8 +13,8 @@ type expr =
   | Binop of expr * bop * expr
   | Assign of string * expr
   | Return of expr
-  | VarAssign of typ * string * expr
-  | VarDec of typ * string
+  | VarAssign of typevar * variable * expr
+  | VarDec of typevar * variable
   | Break
   | Continue
   | Pass
