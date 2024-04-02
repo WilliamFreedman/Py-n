@@ -22,9 +22,10 @@ type stmt =
   | Break
   | Continue
   | Pass
+  | StmtExpr of expr (** Mostly for assignment expressions (w/ no type decl) **)
   | Return of expr
 
-(**
+(** A block can be a sequence of statements, an if ... elif ... else, or a loop **)
 type block =
   | Expr of expr
   | If of expr * block * block
