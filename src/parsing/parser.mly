@@ -47,6 +47,9 @@ open Ast
 
 %%
 
+// idenitifier LBRACKET expr RBRACKET
+// ArrayGet identifier expr
+
 program_rule:
 	| block_list EOF {}
 
@@ -99,7 +102,6 @@ identifier_list:
 	identifier
 	|identifier COMMA identifier_list
 
-
 interface_definition:
 	INTERFACE identifier COLON NEWLINE INDENT func_header_list DEDENT
 
@@ -116,7 +118,6 @@ conditional:
 	| IF value COLON NEWLINE INDENT block_list DEDENT
 	| IF value COLON NEWLINE INDENT block_list DEDENT elif_block else_block
 	| IF value COLON NEWLINE INDENT block_list DEDENT elif_block
-
 
 
 elif_block:
@@ -196,16 +197,16 @@ dict_comprehension:
 //   | IF LPAREN expr_rule RPAREN stmt_rule ELSE stmt_rule   { If ($3, $5, $7) }
 //   | WHILE LPAREN expr_rule RPAREN stmt_rule               { While ($3,$5)   }
 
-expr_rule:
-  | BOOLLIT                       { BoolLit $1            }
-  | INTLIT                        { IntLit $1            }
-  | VARIABLE                      { Id $1                 }
-  | expr_rule PLUS expr_rule      { Binop ($1, Add, $3)   }
-  | expr_rule MINUS expr_rule     { Binop ($1, Sub, $3)   }
-  | expr_rule EQ expr_rule        { Binop ($1, Equal, $3) }
-  | expr_rule NEQ expr_rule       { Binop ($1, Neq, $3)   }
-  | expr_rule LT expr_rule        { Binop ($1, Less, $3)  }
-  | expr_rule AND expr_rule       { Binop ($1, And, $3)   }
-  | expr_rule OR expr_rule        { Binop ($1, Or, $3)    }
-  | VARIABLE ASSIGN expr_rule     { Assign ($1, $3)       }
-  | LPAREN expr_rule RPAREN       { $2                    }
+// expr_rule:
+//   | BOOLLIT                       { BoolLit $1            }
+//   | INTLIT                        { IntLit $1            }
+//   | VARIABLE                      { Id $1                 }
+//   | expr_rule PLUS expr_rule      { Binop ($1, Add, $3)   }
+//   | expr_rule MINUS expr_rule     { Binop ($1, Sub, $3)   }
+//   | expr_rule EQ expr_rule        { Binop ($1, Equal, $3) }
+//   | expr_rule NEQ expr_rule       { Binop ($1, Neq, $3)   }
+//   | expr_rule LT expr_rule        { Binop ($1, Less, $3)  }
+//   | expr_rule AND expr_rule       { Binop ($1, And, $3)   }
+//   | expr_rule OR expr_rule        { Binop ($1, Or, $3)    }
+//   | VARIABLE ASSIGN expr_rule     { Assign ($1, $3)       }
+//   | LPAREN expr_rule RPAREN       { $2                    }

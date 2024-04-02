@@ -1,6 +1,6 @@
-type bop = Add | Sub | Equal | Neq | Less | And | Or
+type bop = Add | Sub | Equal | Neq | Less | And | Or | ArrayGet
 
-type typ = Int | Bool
+type typ = Int | Bool | String | TypeVariable of string
 
 type expr =
   | IntLit of int
@@ -8,6 +8,7 @@ type expr =
   | Id of string
   | Binop of expr * bop * expr
   | Assign of string * expr
+  | Return of expr
 
 type block =
   | Expr of expr
