@@ -6,6 +6,22 @@ type typevar = Int | Bool | String | TypeVariable of string
 (** Indicates a variable **)
 type variable = Var of string
 
+type special_assignment = 
+  IdentityAssign
+  | PlusAssign
+  | MinusAssign
+  | TimesAssign
+  | DivideAssign
+  | FloorDivAssign
+  | ExpAssign
+  | AndAssign
+  | OrAssign
+  | XorAssign
+  | RShiftAssign
+  | LShiftAssign
+  | ModAssign
+
+
 type expr =
   BoolLit of bool
   | IntLit of int
@@ -13,7 +29,7 @@ type expr =
   | StringLit of string
   | VarExpr of variable
   | Binop of expr * bop * expr
-  | Assign of variable * expr
+  | Assign of variable * special_assignment * expr
   (** | Return of expr **)
 
 type stmt =
@@ -31,7 +47,6 @@ type block =
   | If of expr * block * block
   | While of expr * block
   | For of expr * expr * block
-  **)
 
 (** type bind = typ * string **)
 

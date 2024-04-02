@@ -49,6 +49,7 @@ rule tokenize = parse
 | "^=" { XORASSIGN }
 | ">>=" { RSHIFTASSIGN } 
 | "<<=" { LSHIFTASSIGN }
+| "%=" { MODASSIGN }
 | '.' { DOT }
 | ':' {COLON}
 | "def" { DEF }

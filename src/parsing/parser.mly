@@ -81,29 +81,26 @@ declaration:
 
 (** Typenames - standard types + user defined ones (via classes) **)
 typename:
-    INT         { Int }
+    (*INT         { Int }
     | STR       { Str }
     | BOOL      { Bool }
     | FLOAT     { Float }
-    | TYPENAME  { TypeVariable($1) }
+    |*) TYPENAME  { TypeVariable($1) }
 
-
-(* TODO: Implement the nonstandard assigns probably later on *)
 assignment:
-    VARIABLE ASSIGN expr    { Assign (Var($1), $3) }
-	(** | identifier PLUSASSIGN expr {Assign {$1, $3}}
-	| identifier MINUSASSIGN expr {Assign {$1, $3}}
-	| identifier TIMESASSIGN expr {Assign {$1, $3}}
-	| identifier EXPASSIGN expr {Assign {$1, $3}}
-	| identifier DIVIDEASSIGN expr {Assign {$1, $3}}
-	| identifier FLOORDIVASSIGN expr {Assign {$1, $3}}
-	| identifier MODASSIGN expr {Assign {$1, $3}}
-	| identifier ANDASSIGN expr {Assign {$1, $3}}
-	| identifier ORASSIGN expr {Assign {$1, $3}}
-	| identifier XORASSIGN expr {Assign {$1, $3}}
-	| identifier RSHIFTASSIGN expr {Assign {$1, $3}}
-	| identifier LSHIFTASSIGN expr {Assign {$1, $3}}
-    **)
+    VARIABLE ASSIGN expr    			{ Assign(Var($1), IdentityAssign, $3) }
+	| identifier PLUSASSIGN expr 		{ Assign(Var($1), PlusAssign,     $3) }
+	| identifier MINUSASSIGN expr 		{ Assign(Var($1), MinusAssign,    $3) }
+	| identifier TIMESASSIGN expr 		{ Assign(Var($1), TimesAssign,    $3) }
+	| identifier EXPASSIGN expr 		{ Assign(Var($1), ExpAssign,      $3) }
+	| identifier DIVIDEASSIGN expr 		{ Assign(Var($1), DivideAssign,   $3) }
+	| identifier FLOORDIVASSIGN expr 	{ Assign(Var($1), FloorDivAssign  $3) }
+	| identifier MODASSIGN expr 		{ Assign(Var($1), ModAssign,      $3) }
+	| identifier ANDASSIGN expr 		{ Assign(Var($1), AndAssign,      $3) }
+	| identifier ORASSIGN expr 			{ Assign(Var($1), OrAssign,       $3) }
+	| identifier XORASSIGN expr 		{ Assign(Var($1), XorAssign,      $3) }
+	| identifier RSHIFTASSIGN expr 		{ Assign(Var($1), RShiftAssign,   $3) }
+	| identifier LSHIFTASSIGN expr 		{ Assign(Var($1), LShiftAssign,   $3) }
 
 (** TODO: Update AST to implement actions for class definitions **)
 (**
