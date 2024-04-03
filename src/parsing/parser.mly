@@ -18,11 +18,7 @@ open Ast
 %token <string> STRINGLIT
 
 %token <string> VARIABLE
-%token <string> TYPENAME
-%token <string> FUNCNAME
 
-// %start program
-// %type <Ast.program> program
 %start program_rule
 %type <Ast.program> program_rule
 
@@ -42,16 +38,7 @@ open Ast
 %right EXPONENT
 %left LPAREN RPAREN
 
-(** List indexing? (identifier (for an int) | int) optional:, comma separated**)
-
-%start program_rule
-%type <Ast.program> program_rule
-//%type <Ast.expr list> expr_list
-
 %%
-
-// identifier LBRACKET expr RBRACKET
-// ArrayGet identifier expr
 
 program_rule:
     block_list EOF { {body=$1}  }
@@ -62,7 +49,7 @@ block_list:
 
 newline_list:
 	NEWLINE {}
-	| newline_list NEWLINE {}
+	//| newline_list NEWLINE {}
 
 block:
     declaration     { $1 }
@@ -76,11 +63,10 @@ block:
  	| function_block_call {$1}
 	| return_exit {$1}
 	| return_val {$1}
-	(** | class_definition {$1} **)
-	(** | conditional {$1} **)
-	(** | assert {$1} **)
-	(** | for_loop {$1} **)
-	//| expr {$1} should this be allowed?
+	| class_definition {$1} 
+	| conditional {$1}
+	| for_loop {$1}
+	// | expr {$1} should this be allowed?
 
 return_exit: 
 	RETURN { ReturnVoid }
@@ -153,6 +139,9 @@ list_comprehension:
 	LBRACK expr FOR VARIABLE IN expr RBRACK {ListCompUnconditional($2, Var($4), $6)}
  	| LBRACK expr FOR VARIABLE IN expr IF expr RBRACK {ListCompConditional($2, Var($4), $6, $8)}
 
+dict_comprehension:
+	LCURL expr COLON expr FOR LPAREN VARIABLE COMMA VARIABLE RPAREN IN expr RCURL {DictCompUnconditional($2, $4, Var($7), Var($9), $12)}
+ 	| LCURL expr COLON expr FOR LPAREN VARIABLE COMMA VARIABLE RPAREN IN expr IF expr RCURL {DictCompConditional($2, $4, Var($7), Var($9), $12, $14)}
 
 list_literal:
 	LBRACK list_contents RBRACK { List($2)}
@@ -163,8 +152,8 @@ list_contents:
 	| expr COMMA list_contents  { $1 :: $3 }
 
 dict:
-	| dict_literal {$1}
-	// | dict_comprehension
+	 dict_literal {$1}
+	| dict_comprehension {$1}
 
 
 dict_literal:
@@ -180,14 +169,17 @@ dict_element:
 
 
 while_loop:
-	WHILE expr COLON NEWLINE INDENT block_list DEDENT { While($2, $6) }
+	WHILE expr COLON newline_list INDENT block_list DEDENT { While($2, $6) }
 
+for_loop:
+	FOR VARIABLE IN expr COLON NEWLINE INDENT block_list {For(Var($2), $4, $8)}
+	
 interface_definition:
-	INTERFACE VARIABLE COLON NEWLINE INDENT func_signature_list DEDENT {InterfaceDefinition(Var($2), $6)}
+	INTERFACE VARIABLE COLON newline_list INDENT func_signature_list DEDENT {InterfaceDefinition(Var($2), $6)}
 
 class_definition:
-	CLASS VARIABLE COLON NEWLINE INDENT block_list DEDENT { ClassDefinition(Var($1), $6) }
-	| CLASS VARIABLE IMPLEMENTS VARIABLE COLON NEWLINE 
+	CLASS VARIABLE COLON newline_list INDENT block_list DEDENT { ClassDefinition(Var($2), $6) }
+	| CLASS VARIABLE IMPLEMENTS variable_list COLON newline_list INDENT block_list DEDENT  { ClassDefinitionImplements(Var($2), $4, $8) }
 
 
 variable_list:
@@ -198,13 +190,13 @@ variable_list:
 func_signature_list:
 	/* nothing */               { [] }
 	| func_signature {[$1]}
-	| func_signature NEWLINE func_signature_list  { $1 :: $3 }
+	| func_signature newline_list func_signature_list  { $1 :: $3 }
 
 func_signature:
 	DEF VARIABLE LPAREN args_list RPAREN ARROW typename {(Var($2), $4, $7)}
 
 function_definition:
-	func_signature COLON NEWLINE INDENT block_list DEDENT {FunctionDefinition($1, $5)}
+	func_signature COLON newline_list INDENT block_list DEDENT {FunctionDefinition($1, $5)}
 
 args_list:
 	| /* nothing */ {[]}
@@ -213,99 +205,12 @@ args_list:
 
 arg:
 	VARIABLE COLON typename { (Var($1), $3) }
-	
-(** TODO: Update AST to implement actions for class definitions **)
-(**
-class_definition:
-    CLASS identifier LPAREN identifier RPAREN COLON NEWLINE INDENT block_list DEDENT
-	| CLASS identifier LPAREN RPAREN COLON NEWLINE INDENT block_list DEDENT
-	| CLASS identifier LPAREN identifier RPAREN implements LPAREN identifier_list RPAREN COLON NEWLINE INDENT block_list DEDENT
-	| CLASS identifier LPAREN RPAREN implements LPAREN identifier_list RPAREN COLON NEWLINE INDENT block_list DEDENT
-    **)
 
-(**
-identifier_list:
-	identifier { $1 }
-	|identifier COMMA identifier_list { $1 :: $3}
-
-interface_definition:
-	INTERFACE identifier COLON NEWLINE INDENT func_header_list DEDENT
-    **)
-
-(** TODO: Update AST to implement actions for function headers **)
-    (**
-
-    **)
-
-   (** TODO: Update AST to implement actions for conditionals and loops **)
-   (**
 conditional:
-	| IF value COLON NEWLINE INDENT block_list DEDENT else_block
-	| IF value COLON NEWLINE INDENT block_list DEDENT
-	| IF value COLON NEWLINE INDENT block_list DEDENT elif_block else_block
-	| IF value COLON NEWLINE INDENT block_list DEDENT elif_block
+	IF expr COLON NEWLINE INDENT block_list DEDENT elif { IfNonEnd($2, $6, $8) }
+	| IF expr COLON NEWLINE INDENT block_list DEDENT { IfEnd($2, $6) }
 
-
-elif_block:
-	ELIF expr COLON NEWLINE INDENT block_list DEDENT elif_block else_block
-	| ELIF expr COLON NEWLINE INDENT block_list DEDENT else_block
-	| ELIF expr COLON NEWLINE INDENT block_list DEDENT elif_block
-	| ELIF expr COLON NEWLINE INDENT block_list DEDENT
-
-else_block:
-	| ELSE COLON NEWLINE INDENT block_list DEDENT {Else {}}
-
-
-
-
-(* Value doesn't exist right now *)
-for_loop:
-	| FOR identifier IN value NEWLINE INDENT block_list DEDENT {For {$2, $4, $7}}
-    **)
-
-(** TODO: Update AST to implement actions for function definitions **)
-(**
-
-    **)
-
-(** TODO: Update AST to implement actions for arguments **)
-    (**
-
-**)
-
-(**
-function_call:
-	| identifier LPAREN args RPAREN
-
-assert:
-	| ASSERT LPAREN expr RPAREN { Assert ($3)}
-
-list Expressions
-**)
-
-(**
-iterable:
-	| list
-	| dict
-
-list_comprehension:
-	LBRACK value FOR identifier IN value RBRACK
-	|LBRACK value FOR identifier IN value IF value RBRACK
-**)
-
-(**
-//Dict 
-
-dict_comprehension:
-	| LBRACK expr:value FOR identifier IN value (IF value)? RBRACK
-**)
-
-(**
-stmt_rule:
-    expr_rule NEWLINE                                        { Expr $1         }
-    | LBRACE stmt_list_rule RBRACE                          { Block $2        }
-    | IF LPAREN expr_rule RPAREN stmt_rule ELSE stmt_rule   { If ($3, $5, $7) }
-    | WHILE LPAREN expr_rule RPAREN stmt_rule               { While ($3,$5)   }
-**) 
-
-
+elif:
+	ELIF expr COLON NEWLINE INDENT block_list DEDENT elif { ElifNonEnd($2, $6, $8) }
+	| ELIF expr COLON NEWLINE INDENT block_list DEDENT { ElifEnd($2, $6) }
+	| ELSE COLON NEWLINE INDENT block_list DEDENT { ElseEnd($5) }

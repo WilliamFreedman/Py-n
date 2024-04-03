@@ -1,4 +1,7 @@
+def return_bool(b: bool) -> void:
+    return True
+
 x: int = 3
 y: float = 4.0
 
-print(x + y < 7.01 and x + y > 6.99) # Should print True
+print_bool(x + y < 7.01 and x + y > 6.99)

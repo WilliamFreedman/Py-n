@@ -6,3 +6,9 @@ LRM [link](https://docs.google.com/document/d/19qIKJs5IrcalFDOtZ086bfdhxixGeDrwk
 
 Try running `ocamlbuild scanner.native` in the `src\parsing` directory.
 Doesn't compile at the moment.
+
+## Hellow World Front-End Checkpoint Update
+
+So far, we have completed the scanner and the parser, with a functioning AST pretty printer.
+
+We also have included a few test files that demonstrate important features of our language.

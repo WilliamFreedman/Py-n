@@ -1,0 +1,6 @@
+x: int = 3
+y: int = 3
+
+while x == y:
+    print("Hello")
+
