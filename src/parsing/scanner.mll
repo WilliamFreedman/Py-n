@@ -54,6 +54,7 @@ rule tokenize = parse
 | ':' {COLON}
 | "def" { DEF }
 | "return" { RETURN }
+| "implements" { IMPLEMENTS }
 | "if" { IF }
 | "else" { ELSE }
 | "elif" { ELIF }
@@ -77,6 +78,7 @@ rule tokenize = parse
 | "float" { FLOAT }
 | "list" { LIST }
 | "dict" { DICT }
+| "void" { VOID }
 | "and" { AND } 
 | "or" {OR}
 | "DEDENT" { DEDENT }

@@ -8,8 +8,8 @@ open Ast
 %token GT LT GEQ LEQ EQ NEQ ASSIGN PLUSASSIGN MINUSASSIGN TIMESASSIGN DIVIDEASSIGN MODASSIGN
 %token FLOORDIVASSIGN EXPASSIGN ANDASSIGN ORASSIGN XORASSIGN RSHIFTASSIGN LSHIFTASSIGN 
 
-%token DEDENT OR AND FLOAT BOOL STR INT INDENT NONE FALSE TRUE CLASS INTERFACE FOR WHILE 
-%token FROM DEL NOT IS IN PASS CONTINUE BREAK ELIF ELSE IF RETURN DEF COLON ARROW LIST DICT
+%token DEDENT OR AND FLOAT BOOL STR INT VOID INDENT NONE FALSE TRUE CLASS INTERFACE FOR WHILE 
+%token FROM DEL NOT IS IN PASS CONTINUE BREAK ELIF ELSE IF RETURN DEF COLON ARROW LIST DICT IMPLEMENTS
 %token EOF
 
 %token <bool> BOOLLIT
@@ -58,22 +58,35 @@ program_rule:
 
 block_list:
 	/* nothing */               { [] }
-	| block NEWLINE block_list  { $1 :: $3 }  
+	| block newline_list block_list  { $1 :: $3 }  
+
+newline_list:
+	NEWLINE {}
+	| newline_list NEWLINE {}
 
 block:
     declaration     { $1 }
   	| assignment    { $1 }
+	| interface_definition {$1}
+	| while_loop {$1}
+	| BREAK { Break }
+	| CONTINUE { Continue }
+	| PASS { Pass }
+	| function_definition {$1}
+ 	| function_block_call {$1}
+	| return_exit {$1}
+	| return_val {$1}
 	(** | class_definition {$1} **)
-	(** | interface_definition {$1} **)
 	(** | conditional {$1} **)
 	(** | assert {$1} **)
-	(** | while_loop {$1} **)
 	(** | for_loop {$1} **)
-	(** | BREAK { Break } **)
-	(** | CONTINUE { Continue } **)
-	(** | PASS { Pass } **)
-	(** | function_definition {$1} **)
-	(** | function_call {$1} **)
+	//| expr {$1} should this be allowed?
+
+return_exit: 
+	RETURN { ReturnVoid }
+
+return_val:
+	RETURN expr { ReturnVal($2) }
 
 declaration:
     VARIABLE COLON typename ASSIGN expr { VarDec($3, Var($1), $5) } 
@@ -84,6 +97,7 @@ typename:
 	| BOOL { TypeVariable("bool") }
 	| FLOAT { TypeVariable("float") }
 	| STR { TypeVariable("str") }
+	| VOID { TypeVariable("void")}
   	| VARIABLE { TypeVariable($1) }
 	| LIST LBRACK typename RBRACK { List($3) }
 	| DICT LBRACK typename COMMA typename RBRACK { Dict($3, $5) }
@@ -104,13 +118,16 @@ assignment:
 	| VARIABLE LSHIFTASSIGN expr 	{ BlockAssign(Var($1), LShiftAssign,   $3) }
 
 expr:
-	 BOOLLIT                        { BoolLit($1)           }
-    | INTLIT                        { IntLit($1)            }
-    | FLOATLIT                      { FloatLit($1)          }
-    | STRINGLIT                     { StringLit($1)         }
-    | VARIABLE                      { VarExpr(Var($1))      }
-	| list							{ $1 }    
-	| dict							{ $1 }
+	 BOOLLIT                        { BoolLit($1)                   }
+    | INTLIT                        { IntLit($1)                    }
+    | FLOATLIT                      { FloatLit($1)                  }
+    | STRINGLIT                     { StringLit($1)                 }
+    | VARIABLE                      { VarExpr(Var($1))              }
+	| list							{ $1                            }    
+	| dict							{ $1                            }
+	| STRINGLIT LBRACK expr RBRACK  { IndexingStringLit($1, $3) 	}
+	| list LBRACK expr RBRACK       { IndexingExprList($1, $3) 		}
+	| VARIABLE LBRACK expr RBRACK   { IndexingVar(Var($1), $3) 		}
 	| expr PLUS expr                { Binop($1, Add, $3)    }
     | expr MINUS expr               { Binop($1, Sub, $3)    }
     | expr EQ expr                  { Binop($1, Eq, $3)  	}
@@ -120,10 +137,21 @@ expr:
     | expr OR expr                  { Binop($1, Or, $3)     }
     | VARIABLE ASSIGN expr          { Assign(Var($1), IdentityAssign, $3)  }
     | LPAREN expr RPAREN            { $2                    }
+	| function_call					{ $1                    }
+
+function_call:
+	VARIABLE LPAREN list_contents RPAREN { FuncCall(Var($1), $3) }
+
+function_block_call:
+	VARIABLE LPAREN list_contents RPAREN { FuncBlockCall(Var($1), $3) }
 
 list:
-	| list_literal {$1}
-	// | list_comprehension
+	list_literal { $1 }
+	| list_comprehension { $1 }
+
+list_comprehension:
+	LBRACK expr FOR VARIABLE IN expr RBRACK {ListCompUnconditional($2, Var($4), $6)}
+ 	| LBRACK expr FOR VARIABLE IN expr IF expr RBRACK {ListCompConditional($2, Var($4), $6, $8)}
 
 
 list_literal:
@@ -151,9 +179,41 @@ dict_element:
 	expr COLON expr                { ($1, $3)  }
 
 
-// while_loop:
-// 	WHILE expr COLON NEWLINE INDENT block_list DEDENT { While($2, $6) }
+while_loop:
+	WHILE expr COLON NEWLINE INDENT block_list DEDENT { While($2, $6) }
 
+interface_definition:
+	INTERFACE VARIABLE COLON NEWLINE INDENT func_signature_list DEDENT {InterfaceDefinition(Var($2), $6)}
+
+class_definition:
+	CLASS VARIABLE COLON NEWLINE INDENT block_list DEDENT { ClassDefinition(Var($1), $6) }
+	| CLASS VARIABLE IMPLEMENTS VARIABLE COLON NEWLINE 
+
+
+variable_list:
+	/* nothing */               { [] }
+	| VARIABLE                 { [Var($1)] }
+	| VARIABLE COMMA variable_list  { Var($1) :: $3 }
+
+func_signature_list:
+	/* nothing */               { [] }
+	| func_signature {[$1]}
+	| func_signature NEWLINE func_signature_list  { $1 :: $3 }
+
+func_signature:
+	DEF VARIABLE LPAREN args_list RPAREN ARROW typename {(Var($2), $4, $7)}
+
+function_definition:
+	func_signature COLON NEWLINE INDENT block_list DEDENT {FunctionDefinition($1, $5)}
+
+args_list:
+	| /* nothing */ {[]}
+	| arg {[$1]}
+	| arg COMMA args_list {$1 :: $3}
+
+arg:
+	VARIABLE COLON typename { (Var($1), $3) }
+	
 (** TODO: Update AST to implement actions for class definitions **)
 (**
 class_definition:
@@ -174,13 +234,7 @@ interface_definition:
 
 (** TODO: Update AST to implement actions for function headers **)
     (**
-func_header_list:
-	func_header
-	| func_header_list NEWLINE func_header
 
-func_header:
-	| DEF identifier identifier LPAREN args_list RPAREN ARROW IDENTIFIER
-	| DEF identifier identifier RPAREN LPAREN
     **)
 
    (** TODO: Update AST to implement actions for conditionals and loops **)
@@ -211,21 +265,12 @@ for_loop:
 
 (** TODO: Update AST to implement actions for function definitions **)
 (**
-function_definition:
-	| DEF identifier LPAREN args RPAREN ARROW type COLON NEWLINE INDENT block_list RETURN value DEDENT
+
     **)
 
 (** TODO: Update AST to implement actions for arguments **)
     (**
-args:
-	| LPAREN args_list RPAREN
 
-args_list:
-	arg COMMA args_list
-	| arg
-
-arg:
-	identifier COLON identifier
 **)
 
 (**
@@ -251,16 +296,6 @@ list_comprehension:
 (**
 //Dict 
 
-dict:
-	| dict_literal
-	| dict_comprehension
-
-dict_literal:
-	LCURL dict_contents RCURL
-
-dict_contents:
-	| ε
-	| value COLON value, *value COLON expr
 dict_comprehension:
 	| LBRACK expr:value FOR identifier IN value (IF value)? RBRACK
 **)
