@@ -114,6 +114,7 @@ expr:
 	| STRINGLIT LBRACK expr RBRACK  { IndexingStringLit($1, $3) 	}
 	| list LBRACK expr RBRACK       { IndexingExprList($1, $3) 		}
 	| VARIABLE LBRACK expr RBRACK   { IndexingVar(Var($1), $3) 		}
+	| expr DOT expr                 { Binop($1, Dot, $3)    }
 	| expr PLUS expr                { Binop($1, Add, $3)    }
     | expr MINUS expr               { Binop($1, Sub, $3)    }
     | expr EQ expr                  { Binop($1, Eq, $3)  	}
