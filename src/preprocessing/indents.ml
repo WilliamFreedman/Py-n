@@ -25,6 +25,7 @@ module IndentFixup = struct
     string_repeat_helper str count ""
   let indent_fixup base_file_name =
     let input_file = "./temp_files/" ^ (Filename.remove_extension base_file_name) ^ "_m" ^ Filename.extension base_file_name in
+    Printf.printf "%s\n" input_file;
     let result_lines = ref [] in
     let ic = open_in input_file in
     try
