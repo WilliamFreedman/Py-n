@@ -1,8 +1,6 @@
 # Py+^n
 
-Currently building the parser / scanner for our language.
-
-LRM [link](https://docs.google.com/document/d/19qIKJs5IrcalFDOtZ086bfdhxixGeDrwkZcURITzKRQ/edit?usp=sharing) (for reference)
+The language reference manual `LRM` can be foun in the following [link](https://docs.google.com/document/d/19qIKJs5IrcalFDOtZ086bfdhxixGeDrwkZcURITzKRQ/edit?usp=sharing):
 
 Try running `ocamlbuild scanner.native` in the `src\parsing` directory.
 
@@ -19,3 +17,6 @@ We also have included a few test files that demonstrate important features of ou
 
 Instructions for use: Move the test file to src/preprocessing/input_file. In the root directory, compile
 and run main.ml with the name of the test file as a command line argument.
+We also have included a few test files that demonstrate important features of our language.
+
+In the future, semantics should be implemented along with any back-end functionality that would be required.
