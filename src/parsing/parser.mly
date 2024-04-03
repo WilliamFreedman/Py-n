@@ -9,7 +9,7 @@ open Ast
 %token FLOORDIVASSIGN EXPASSIGN ANDASSIGN ORASSIGN XORASSIGN RSHIFTASSIGN LSHIFTASSIGN 
 
 %token DEDENT OR AND FLOAT BOOL STR INT INDENT NONE FALSE TRUE CLASS INTERFACE FOR WHILE 
-%token FROM DEL NOT IS IN PASS CONTINUE BREAK ELIF ELSE IF RETURN DEF COLON ARROW
+%token FROM DEL NOT IS IN PASS CONTINUE BREAK ELIF ELSE IF RETURN DEF COLON ARROW LIST DICT
 %token EOF
 
 %token <bool> BOOLLIT
@@ -85,6 +85,8 @@ typename:
 	| FLOAT { TypeVariable("float") }
 	| STR { TypeVariable("str") }
   	| VARIABLE { TypeVariable($1) }
+	| LIST LBRACK typename RBRACK { List($3) }
+	| DICT LBRACK typename COMMA typename RBRACK { Dict($3, $5) }
 
 assignment:
     VARIABLE ASSIGN expr    		{ BlockAssign(Var($1), IdentityAssign, $3) }
@@ -100,6 +102,57 @@ assignment:
 	| VARIABLE XORASSIGN expr 		{ BlockAssign(Var($1), XorAssign,      $3) }
 	| VARIABLE RSHIFTASSIGN expr 	{ BlockAssign(Var($1), RShiftAssign,   $3) }
 	| VARIABLE LSHIFTASSIGN expr 	{ BlockAssign(Var($1), LShiftAssign,   $3) }
+
+expr:
+	 BOOLLIT                        { BoolLit($1)           }
+    | INTLIT                        { IntLit($1)            }
+    | FLOATLIT                      { FloatLit($1)          }
+    | STRINGLIT                     { StringLit($1)         }
+    | VARIABLE                      { VarExpr(Var($1))      }
+	| list							{ $1 }    
+	| dict							{ $1 }
+	| expr PLUS expr                { Binop($1, Add, $3)    }
+    | expr MINUS expr               { Binop($1, Sub, $3)    }
+    | expr EQ expr                  { Binop($1, Eq, $3)  	}
+    | expr NEQ expr                 { Binop($1, Neq, $3)    }
+    | expr LT expr                  { Binop($1, Less, $3)   }
+    | expr AND expr                 { Binop($1, And, $3)    }
+    | expr OR expr                  { Binop($1, Or, $3)     }
+    | VARIABLE ASSIGN expr          { Assign(Var($1), IdentityAssign, $3)  }
+    | LPAREN expr RPAREN            { $2                    }
+
+list:
+	| list_literal {$1}
+	// | list_comprehension
+
+
+list_literal:
+	LBRACK list_contents RBRACK { List($2)}
+
+list_contents:
+	/* nothing */               { [] }
+	| expr                 { [$1] }
+	| expr COMMA list_contents  { $1 :: $3 }
+
+dict:
+	| dict_literal {$1}
+	// | dict_comprehension
+
+
+dict_literal:
+	LCURL dict_contents RCURL { Dict($2)}
+
+dict_contents:
+	/* nothing */               { [] }
+	| dict_element               { [$1]  }
+	| dict_element COMMA dict_contents  { $1 :: $3 }
+
+dict_element:
+	expr COLON expr                { ($1, $3)  }
+
+
+// while_loop:
+// 	WHILE expr COLON NEWLINE INDENT block_list DEDENT { While($2, $6) }
 
 (** TODO: Update AST to implement actions for class definitions **)
 (**
@@ -148,8 +201,7 @@ elif_block:
 else_block:
 	| ELSE COLON NEWLINE INDENT block_list DEDENT {Else {}}
 
-while_loop:
-	| WHILE expr COLON NEWLINE INDENT block_list DEDENT {While {$2, $6} }
+
 
 
 (* Value doesn't exist right now *)
@@ -191,17 +243,6 @@ iterable:
 	| list
 	| dict
 
-list:
-	| list_literal
-	| list_comprehension
-
-list_literal:
-	LBRACK list_contents RBRACK
-
-list_contents:
-	| value
-	| list_contents COMMA value
-
 list_comprehension:
 	LBRACK value FOR identifier IN value RBRACK
 	|LBRACK value FOR identifier IN value IF value RBRACK
@@ -215,7 +256,7 @@ dict:
 	| dict_comprehension
 
 dict_literal:
-	LBRACE dict_contents RBRACE
+	LCURL dict_contents RCURL
 
 dict_contents:
 	| ε
@@ -232,18 +273,4 @@ stmt_rule:
     | WHILE LPAREN expr_rule RPAREN stmt_rule               { While ($3,$5)   }
 **) 
 
-expr:
-    BOOLLIT                         { BoolLit($1)           }
-    | INTLIT                        { IntLit($1)            }
-    | FLOATLIT                      { FloatLit($1)          }
-    | STRINGLIT                     { StringLit($1)         }
-    | VARIABLE                      { VarExpr(Var($1))      }
-    | expr PLUS expr                { Binop($1, Add, $3)    }
-    | expr MINUS expr               { Binop($1, Sub, $3)    }
-    | expr EQ expr                  { Binop($1, Eq, $3)  }
-    | expr NEQ expr                 { Binop($1, Neq, $3)    }
-    | expr LT expr                  { Binop($1, Less, $3)   }
-    | expr AND expr                 { Binop($1, And, $3)    }
-    | expr OR expr                  { Binop($1, Or, $3)     }
-    | VARIABLE ASSIGN expr          { Assign(Var($1), IdentityAssign, $3)  }
-    | LPAREN expr RPAREN            { $2                    }
+

@@ -75,6 +75,8 @@ rule tokenize = parse
 | "str" { STR }
 | "bool" {  BOOL  }
 | "float" { FLOAT }
+| "list" { LIST }
+| "dict" { DICT }
 | "and" { AND } 
 | "or" {OR}
 | "DEDENT" { DEDENT }
