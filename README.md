@@ -10,4 +10,12 @@ Try running `ocamlbuild scanner.native` in the `src\parsing` directory.
 
 So far, we have completed the scanner and the parser, with a functioning AST pretty printer.
 
+The preprocessor works to manage macros and insert INDENT/DEDENT tokens, but there is a bug with 
+how those tokens interact with newlines in our grammar which we need to look into. We think this is
+due to the order in which newline and DEDENT tokens are added, but we need to spend more time on it to
+be sure.
+
 We also have included a few test files that demonstrate important features of our language.
+
+Instructions for use: Move the test file to src/preprocessing/input_file. In the root directory, compile
+and run main.ml with the name of the test file as a command line argument.
