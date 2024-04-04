@@ -38,6 +38,7 @@ open Ast
 %left TIMES DIVIDE FLOORDIVIDE MOD
 %right EXPONENT
 %left LPAREN RPAREN
+%left DOT LBRACK RBRACK
 
 %%
 
