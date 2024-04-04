@@ -89,39 +89,38 @@ typename:
 	| LIST LBRACK typename RBRACK { List($3) }
 	| DICT LBRACK typename COMMA typename RBRACK { Dict($3, $5) }
 
-(**
+(** VARIABLE: Just a string, variable: string.string string[blah blah] **)
 variable:
     VARIABLE                        { Var($1) }
     | variable DOT variable         { VarDot($1, $3) }
     | variable LBRACK expr RBRACK   { VarIndex($1, $3) }
-**)
 
 assignment:
-    VARIABLE ASSIGN expr    		{ BlockAssign(Var($1), IdentityAssign, $3) }
-	| VARIABLE PLUSASSIGN expr 		{ BlockAssign(Var($1), PlusAssign,     $3) }
-	| VARIABLE MINUSASSIGN expr 	{ BlockAssign(Var($1), MinusAssign,    $3) }
-	| VARIABLE TIMESASSIGN expr 	{ BlockAssign(Var($1), TimesAssign,    $3) }
-	| VARIABLE EXPASSIGN expr 		{ BlockAssign(Var($1), ExpAssign,      $3) }
-	| VARIABLE DIVIDEASSIGN expr 	{ BlockAssign(Var($1), DivideAssign,   $3) }
-	| VARIABLE FLOORDIVASSIGN expr 	{ BlockAssign(Var($1), FloorDivAssign,  $3) }
-	| VARIABLE MODASSIGN expr 		{ BlockAssign(Var($1), ModAssign,      $3) }
-	| VARIABLE ANDASSIGN expr 		{ BlockAssign(Var($1), AndAssign,      $3) }
-	| VARIABLE ORASSIGN expr 		{ BlockAssign(Var($1), OrAssign,       $3) }
-	| VARIABLE XORASSIGN expr 		{ BlockAssign(Var($1), XorAssign,      $3) }
-	| VARIABLE RSHIFTASSIGN expr 	{ BlockAssign(Var($1), RShiftAssign,   $3) }
-	| VARIABLE LSHIFTASSIGN expr 	{ BlockAssign(Var($1), LShiftAssign,   $3) }
+    variable ASSIGN expr    		{ BlockAssign($1, IdentityAssign, $3) }
+	| variable PLUSASSIGN expr 		{ BlockAssign($1, PlusAssign,     $3) }
+	| variable MINUSASSIGN expr 	{ BlockAssign($1, MinusAssign,    $3) }
+	| variable TIMESASSIGN expr 	{ BlockAssign($1, TimesAssign,    $3) }
+	| variable EXPASSIGN expr 		{ BlockAssign($1, ExpAssign,      $3) }
+	| variable DIVIDEASSIGN expr 	{ BlockAssign($1, DivideAssign,   $3) }
+	| variable FLOORDIVASSIGN expr 	{ BlockAssign($1, FloorDivAssign,  $3) }
+	| variable MODASSIGN expr 		{ BlockAssign($1, ModAssign,      $3) }
+	| variable ANDASSIGN expr 		{ BlockAssign($1, AndAssign,      $3) }
+	| variable ORASSIGN expr 		{ BlockAssign($1, OrAssign,       $3) }
+	| variable XORASSIGN expr 		{ BlockAssign($1, XorAssign,      $3) }
+	| variable RSHIFTASSIGN expr 	{ BlockAssign($1, RShiftAssign,   $3) }
+	| variable LSHIFTASSIGN expr 	{ BlockAssign($1, LShiftAssign,   $3) }
 
 expr:
 	 BOOLLIT                        { BoolLit($1)                   }
     | INTLIT                        { IntLit($1)                    }
     | FLOATLIT                      { FloatLit($1)                  }
     | STRINGLIT                     { StringLit($1)                 }
-    | VARIABLE                      { VarExpr(Var($1))              }
+    | variable                      { VarExpr($1)                   }
 	| list							{ $1                            }    
 	| dict							{ $1                            }
 	| STRINGLIT LBRACK expr RBRACK  { IndexingStringLit($1, $3) 	}
 	| list LBRACK expr RBRACK       { IndexingExprList($1, $3) 		}
-	| VARIABLE LBRACK expr RBRACK   { IndexingVar(Var($1), $3) 		}
+	(** variable should eat this up | VARIABLE LBRACK expr RBRACK   { IndexingVar(Var($1), $3) 		} **)
 	// | expr DOT expr                 { Binop($1, Dot, $3)    }
 	| expr PLUS expr                { Binop($1, Add, $3)    }
     | expr MINUS expr               { Binop($1, Sub, $3)    }
@@ -136,7 +135,7 @@ expr:
     | expr RSHIFT expr              { Binop($1, RShift, $3)  	}
     | expr MOD expr                 { Binop($1, Mod, $3)    }
     | expr BITXOR expr              { Binop($1, Less, $3)   }
-    | VARIABLE WALRUS expr          { Walrus(Var($1), $3)  }
+    | variable WALRUS expr          { Walrus($1, $3)  }
     | LPAREN expr RPAREN            { $2                    }
 	| function_call					{ $1                    }
 

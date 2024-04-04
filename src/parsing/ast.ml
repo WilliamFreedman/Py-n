@@ -5,14 +5,6 @@ type typevar = Dict of typevar * typevar
   | List of typevar
   | TypeVariable of string
 
-(** Indicates a variable **)
-type variable = Var of string
-
-(** Variable / term indicator, with dots and indexing **)
-(**
-type variable = Var of string | VarDot of variable * variable | VarIndex of variable * expr
-**)
-
 type special_assignment = 
   IdentityAssign
   | PlusAssign
@@ -28,8 +20,9 @@ type special_assignment =
   | LShiftAssign
   | ModAssign
 
-
-type expr =
+(** Variable / term indicator, with dots and indexing **)
+type variable = Var of string | VarDot of variable * variable | VarIndex of variable * expr
+and expr =
   BoolLit of bool
   | IntLit of int
   | FloatLit of float
@@ -44,7 +37,7 @@ type expr =
   | Binop of expr * bop * expr
   | Walrus of variable * expr
   | FuncCall of variable * expr list
-  | IndexingVar of variable * expr
+  (** | IndexingVar of variable * expr **)
   | IndexingStringLit of string * expr
   | IndexingExprList of expr * expr
   (** | Return of expr **)
@@ -81,9 +74,6 @@ type program = {
   body: block list
 }
 
-let string_of_var = function
-Var(v) -> v
-
 (* Pretty-printing functions *)
 let string_of_op = function
     Add -> "+"
@@ -115,8 +105,12 @@ IdentityAssign -> "="
   | RShiftAssign -> ">>="
   | LShiftAssign -> "<<="
   | ModAssign -> "%="
-  
-let rec string_of_expr = function
+
+let rec string_of_var = function
+    Var(v) -> v
+    | VarDot(v1, v2) -> string_of_var v1 ^ "." ^ string_of_var v2
+    | VarIndex(v, e) -> string_of_var v ^ "[" ^ string_of_expr e ^ "]"
+and string_of_expr = function
     IntLit(l) -> string_of_int l
   | BoolLit(true) -> "True"
   | BoolLit(false) -> "False"
@@ -124,16 +118,16 @@ let rec string_of_expr = function
   | StringLit(s) -> s
   | Binop(e1, o, e2) ->
     string_of_expr e1 ^ " " ^ string_of_op o ^ " " ^ string_of_expr e2
-  | Walrus(Var(v), e) -> v ^ " := " ^ string_of_expr e
-  | VarExpr(Var(v)) -> v
+  | Walrus(v, e) -> string_of_var v ^ " := " ^ string_of_expr e
+  | VarExpr(v) -> string_of_var v
   | List(list) -> "[" ^ String.concat ", " (List.map string_of_expr list) ^ "]"
   | Dict(d) -> let expr_expr_printer = function
     (e1, e2) -> string_of_expr e1 ^ " : " ^ string_of_expr e2 in
   "{" ^ String.concat ", " (List.map expr_expr_printer d) ^ "}"
-  | FuncCall(Var(v), e) -> v ^ "(" ^ String.concat ", " (List.map string_of_expr e) ^ ")"
-  | ListCompUnconditional(e1, Var(v), e2) -> "[" ^ string_of_expr e1 ^ " for " ^ v ^ " in " ^ string_of_expr e2 ^ "]"
-  | ListCompConditional(e1, Var(v), e2, e3) -> "[" ^ string_of_expr e1 ^ " for " ^ v ^ " in " ^ string_of_expr e2 ^ " if " ^ string_of_expr e3 ^ "]"
-  | IndexingVar(Var(v), e) -> v ^ "[" ^ string_of_expr e ^ "]"
+  | FuncCall(v, e) -> string_of_var v ^ "(" ^ String.concat ", " (List.map string_of_expr e) ^ ")"
+  | ListCompUnconditional(e1, v, e2) -> "[" ^ string_of_expr e1 ^ " for " ^ string_of_var v ^ " in " ^ string_of_expr e2 ^ "]"
+  | ListCompConditional(e1, v, e2, e3) -> "[" ^ string_of_expr e1 ^ " for " ^ string_of_var v ^ " in " ^ string_of_expr e2 ^ " if " ^ string_of_expr e3 ^ "]"
+  (** Shouldn't be needed anymore: | IndexingVar(v, e) -> v ^ "[" ^ string_of_expr e ^ "]" **)
   | IndexingStringLit(s, e) -> s ^ "[" ^ string_of_expr e ^ "]"
   | IndexingExprList(e1, e2) -> string_of_expr e1 ^ "[" ^ string_of_expr e2 ^ "]"
   | DictCompConditional(e1,e2,v1,v2,e3,e4) -> "{" ^ string_of_expr e1 ^ " : " ^ string_of_expr e2 ^ " for (" ^ string_of_var v1 ^ ", " ^ string_of_var v2 ^ ") in " ^ string_of_expr e3 ^ "if" ^ string_of_expr e4 ^ "}" 
@@ -149,22 +143,22 @@ let rec string_of_typevar = function
   | Dict(t1, t2) -> "dict[" ^ string_of_typevar t1 ^ ", " ^ string_of_typevar t2 ^ "]"
 
 let string_of_arg = function
-(Var(v), t) -> v ^ " : " ^ string_of_typevar t
+(v, t) -> string_of_var v ^ " : " ^ string_of_typevar t
 
 let string_of_func_sig = function
-  (Var(v), args, ret_type) ->
-    "def " ^ v ^ "(" ^ String.concat ", " (List.map string_of_arg args) ^ ") -> " ^ string_of_typevar ret_type
+  (v, args, ret_type) ->
+    "def " ^ string_of_var v ^ "(" ^ String.concat ", " (List.map string_of_arg args) ^ ") -> " ^ string_of_typevar ret_type
     
 let rec string_of_block = function
-  BlockAssign(Var(v_string), spec_assign, expr) -> 
-  v_string ^ " " ^ string_of_special_assignment spec_assign ^ " " ^ string_of_expr expr ^ "\n"
-  | VarDec(t, Var(v_string), expr) ->
-  v_string ^ ": " ^ string_of_typevar t ^ " = " ^ string_of_expr expr ^ "\n"
+  BlockAssign(v, spec_assign, expr) -> 
+  string_of_var v ^ " " ^ string_of_special_assignment spec_assign ^ " " ^ string_of_expr expr ^ "\n"
+  | VarDec(t, v, expr) ->
+  string_of_var v ^ ": " ^ string_of_typevar t ^ " = " ^ string_of_expr expr ^ "\n"
   | While(e, block_list) ->
   "while " ^ string_of_expr e ^ ":\n" ^ String.concat "" (List.map string_of_block block_list) ^ "\n"
-  | For(Var(v), e, block_list) ->
-  "for " ^ v ^ " in " ^ string_of_expr e ^ ":\n" ^ String.concat "" (List.map string_of_block block_list) ^ "\n"
-  | FuncBlockCall(Var(v), e) -> v ^ "(" ^ String.concat ", " (List.map string_of_expr e) ^ ")" ^ "\n"
+  | For(v, e, block_list) ->
+  "for " ^ string_of_var v ^ " in " ^ string_of_expr e ^ ":\n" ^ String.concat "" (List.map string_of_block block_list) ^ "\n"
+  | FuncBlockCall(v, e) -> string_of_var v ^ "(" ^ String.concat ", " (List.map string_of_expr e) ^ ")" ^ "\n"
   | ReturnVal(e) -> "return " ^ string_of_expr e ^ "\n"
   | ReturnVoid -> "return" ^ "\n"
   | FunctionSignature(signature) -> string_of_func_sig signature ^ "\n"
@@ -173,12 +167,12 @@ let rec string_of_block = function
   | Break -> "break\n"
   | Continue -> "continue\n"
   | Pass -> "pass\n"
-  | InterfaceDefinition(Var(v), sig_list) ->
-  "interface " ^ v ^ ":\n" ^  String.concat "\n" (List.map string_of_func_sig sig_list) ^ "\n"
-  | ClassDefinition(Var(v), block_list) ->
-    "class " ^ v ^ ":\n" ^  String.concat "\n" (List.map string_of_block block_list) ^ "\n"
-  | ClassDefinitionImplements(Var(v), interfaces, block_list) ->
-    "class " ^ v ^ " implements " ^ String.concat ", " (List.map string_of_var interfaces) ^ ":\n" ^  String.concat "\n" (List.map string_of_block block_list) ^ "\n"
+  | InterfaceDefinition(v, sig_list) ->
+  "interface " ^ string_of_var v ^ ":\n" ^  String.concat "\n" (List.map string_of_func_sig sig_list) ^ "\n"
+  | ClassDefinition(v, block_list) ->
+    "class " ^ string_of_var v ^ ":\n" ^  String.concat "\n" (List.map string_of_block block_list) ^ "\n"
+  | ClassDefinitionImplements(v, interfaces, block_list) ->
+    "class " ^ string_of_var v ^ " implements " ^ String.concat ", " (List.map string_of_var interfaces) ^ ":\n" ^  String.concat "\n" (List.map string_of_block block_list) ^ "\n"
   | IfEnd(e, bl) -> "if " ^ string_of_expr e ^ ":\n" ^ String.concat "\n" (List.map string_of_block bl) ^ "\n"
   | IfNonEnd(e, bl, nbl) -> "if " ^ string_of_expr e ^ ":\n" ^ String.concat "\n" (List.map string_of_block bl) ^ string_of_block nbl
   | ElifEnd(e, bl) -> "elif " ^ string_of_expr e ^ ":\n" ^ String.concat "\n" (List.map string_of_block bl) ^ "\n"
