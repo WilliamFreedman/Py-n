@@ -1,6 +1,6 @@
 # Py+^n
 
-The language reference manual `LRM` can be foun in the following [link](https://docs.google.com/document/d/19qIKJs5IrcalFDOtZ086bfdhxixGeDrwkZcURITzKRQ/edit?usp=sharing):
+The language reference manual `LRM` can be found at the following [link](https://docs.google.com/document/d/19qIKJs5IrcalFDOtZ086bfdhxixGeDrwkZcURITzKRQ/edit?usp=sharing):
 
 Try running `ocamlbuild scanner.native` in the `src\parsing` directory.
 
