@@ -89,6 +89,13 @@ typename:
 	| LIST LBRACK typename RBRACK { List($3) }
 	| DICT LBRACK typename COMMA typename RBRACK { Dict($3, $5) }
 
+(**
+variable:
+    VARIABLE                        { Var($1) }
+    | variable DOT variable         { VarDot($1, $3) }
+    | variable LBRACK expr RBRACK   { VarIndex($1, $3) }
+**)
+
 assignment:
     VARIABLE ASSIGN expr    		{ BlockAssign(Var($1), IdentityAssign, $3) }
 	| VARIABLE PLUSASSIGN expr 		{ BlockAssign(Var($1), PlusAssign,     $3) }

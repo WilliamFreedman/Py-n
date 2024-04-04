@@ -8,6 +8,11 @@ type typevar = Dict of typevar * typevar
 (** Indicates a variable **)
 type variable = Var of string
 
+(** Variable / term indicator, with dots and indexing **)
+(**
+type variable = Var of string | VarDot of variable * variable | VarIndex of variable * expr
+**)
+
 type special_assignment = 
   IdentityAssign
   | PlusAssign
@@ -58,7 +63,6 @@ type block =
   | VarDec of typevar * variable * expr (** Mostly for assignment expressions (w/ no type decl) **)
   | ReturnVal of expr
   | ReturnVoid
-  (**| If of expr * block * block **)
   | While of expr * block list
   | For of variable * expr * block list
   | FuncBlockCall of variable * expr list
@@ -72,11 +76,6 @@ type block =
   | ElifEnd of expr * block list
   | ElifNonEnd of expr * block list * block
   | ElseEnd of block list
-
-(** A block can be a sequence of statements, an if ... elif ... else, or a loop **)
-
-
-(** type bind = typ * string **)
 
 type program = {
   body: block list
