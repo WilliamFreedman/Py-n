@@ -25,6 +25,7 @@ open Ast
 (* https://www.geeksforgeeks.org/precedence-and-associativity-of-operators-in-python/ *)
 %right ASSIGN PLUSASSIGN MINUSASSIGN TIMESASSIGN DIVIDEASSIGN FLOORDIVASSIGN EXPASSIGN ANDASSIGN ORASSIGN XORASSIGN RSHIFTASSIGN LSHIFTASSIGN MODASSIGN 
 %right IF ELIF ELSE
+%right WALRUS
 %left OR
 %left AND
 %left NOT
@@ -128,7 +129,7 @@ expr:
     | expr RSHIFT expr              { Binop($1, RShift, $3)  	}
     | expr MOD expr                 { Binop($1, Mod, $3)    }
     | expr BITXOR expr              { Binop($1, Less, $3)   }
-    | VARIABLE ASSIGN expr          { Assign(Var($1), IdentityAssign, $3)  }
+    | VARIABLE WALRUS expr          { Walrus(Var($1), $3)  }
     | LPAREN expr RPAREN            { $2                    }
 	| function_call					{ $1                    }
 

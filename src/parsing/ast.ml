@@ -37,7 +37,7 @@ type expr =
   | DictCompUnconditional of expr * expr * variable * variable * expr
   | Dict of (expr * expr) list
   | Binop of expr * bop * expr
-  | Assign of variable * special_assignment * expr
+  | Walrus of variable * expr
   | FuncCall of variable * expr list
   | IndexingVar of variable * expr
   | IndexingStringLit of string * expr
@@ -125,7 +125,7 @@ let rec string_of_expr = function
   | StringLit(s) -> s
   | Binop(e1, o, e2) ->
     string_of_expr e1 ^ " " ^ string_of_op o ^ " " ^ string_of_expr e2
-  | Assign(Var(v), assign_type, e) -> v ^ string_of_special_assignment assign_type ^ string_of_expr e
+  | Walrus(Var(v), e) -> v ^ " := " ^ string_of_expr e
   | VarExpr(Var(v)) -> v
   | List(list) -> "[" ^ String.concat ", " (List.map string_of_expr list) ^ "]"
   | Dict(d) -> let expr_expr_printer = function
