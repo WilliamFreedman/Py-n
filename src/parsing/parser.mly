@@ -116,15 +116,15 @@ expr:
     | FLOATLIT                      { FloatLit($1)                  }
     | STRINGLIT                     { StringLit($1)                 }
     | variable                      { VarExpr($1)                   }
-    | list							{ $1                            }    
-    | dict							{ $1                            }
+    | list                          { $1                            }    
+    | dict                          { $1                            }
     | STRINGLIT LBRACK expr RBRACK  { IndexingStringLit($1, $3) 	}
     | list LBRACK expr RBRACK       { IndexingExprList($1, $3) 		}
     (** variable should eat this up | VARIABLE LBRACK expr RBRACK   { IndexingVar(Var($1), $3) 		} **)
     (** | expr DOT expr                 { Binop($1, Dot, $3)    } **)
     | expr PLUS expr                { Binop($1, Add, $3)            }
     | expr MINUS expr               { Binop($1, Sub, $3)            }
-    | expr EQ expr                  { Binop($1, Eq, $3)  	        }
+    | expr EQ expr                  { Binop($1, Eq, $3)             }
     | expr NEQ expr                 { Binop($1, Neq, $3)            }
     | expr LT expr                  { Binop($1, Less, $3)           }
     | expr AND expr                 { Binop($1, And, $3)            }
@@ -137,7 +137,7 @@ expr:
     | expr BITXOR expr              { Binop($1, Less, $3)           }
     | variable WALRUS expr          { Walrus($1, $3)                }
     | LPAREN expr RPAREN            { $2                            }
-    | function_call					{ $1                            }
+    | function_call                 { $1                            }
 
 function_call:
 	variable LPAREN list_contents RPAREN    { FuncCall($1, $3)      }
