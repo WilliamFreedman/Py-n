@@ -5,7 +5,7 @@ x : int = 5
 result : float = 3.14 * (2 + 3)
 
 # Logical operators
-flag : bool = true && false || !true
+flag : bool = True and False or True
 print(flag)
 
 # While loop w/ counter
@@ -45,8 +45,8 @@ else:
 	print(x)
 
 # Class definition
-  class Circle:
-	  radius : int
+class Circle:
+    radius : int
 
-	  def area() -> float:
-		  return 3.14159 * (this.radius * this.radius)
+    def area(self) -> float:
+        return 3.14159 * (self.radius * self.radius)
