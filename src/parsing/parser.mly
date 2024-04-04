@@ -77,7 +77,7 @@ return_val:
 declaration:
     VARIABLE COLON typename ASSIGN expr { VarDec($3, Var($1), $5) } 
 	(*| VARIABLE COLON VARIABLE { VarDec(TypeVariable($3), Var($1)) }*)
-	
+
 typename:
 	INT	{ TypeVariable("int") }
 	| BOOL { TypeVariable("bool") }
@@ -114,7 +114,7 @@ expr:
 	| STRINGLIT LBRACK expr RBRACK  { IndexingStringLit($1, $3) 	}
 	| list LBRACK expr RBRACK       { IndexingExprList($1, $3) 		}
 	| VARIABLE LBRACK expr RBRACK   { IndexingVar(Var($1), $3) 		}
-	| expr DOT expr                 { Binop($1, Dot, $3)    }
+	// | expr DOT expr                 { Binop($1, Dot, $3)    }
 	| expr PLUS expr                { Binop($1, Add, $3)    }
     | expr MINUS expr               { Binop($1, Sub, $3)    }
     | expr EQ expr                  { Binop($1, Eq, $3)  	}
@@ -122,6 +122,12 @@ expr:
     | expr LT expr                  { Binop($1, Less, $3)   }
     | expr AND expr                 { Binop($1, And, $3)    }
     | expr OR expr                  { Binop($1, Or, $3)     }
+	| expr BITAND expr              { Binop($1, BitAnd, $3)    }
+	| expr BITOR expr               { Binop($1, BitOr, $3)    }
+    | expr LSHIFT expr              { Binop($1, LShift, $3)    }
+    | expr RSHIFT expr              { Binop($1, RShift, $3)  	}
+    | expr MOD expr                 { Binop($1, Mod, $3)    }
+    | expr BITXOR expr              { Binop($1, Less, $3)   }
     | VARIABLE ASSIGN expr          { Assign(Var($1), IdentityAssign, $3)  }
     | LPAREN expr RPAREN            { $2                    }
 	| function_call					{ $1                    }
