@@ -5,7 +5,7 @@ OCAMLC = ocamlc
 OCAMLFLAGS = -g -w +A-4-9-41-42-44-45-48
 
 # Source files
-SOURCES = main.ml
+SOURCES =   macros.ml indents.ml main.ml
 
 # Object files
 OBJECTS = $(SOURCES:.ml=.cmo)
