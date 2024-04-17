@@ -1,4 +1,4 @@
-type bop = Add | Sub | Eq | Neq | Less | And | Or | Dot | BitAnd | BitOr | LShift | RShift | Mod | BitXor (**| ArrayGet **)
+type bop = Add | Sub | Eq | Neq | Less | And | Or | BitAnd | BitOr | LShift | RShift | Mod | BitXor (*| ArrayGet | Dot *)
 
 (** Types in our language **)
 type typevar = Dict of typevar * typevar
@@ -83,7 +83,7 @@ let string_of_op = function
   | Less -> "<"
   | And -> "&&"
   | Or -> "||"
-  | Dot -> "."
+  (* | Dot -> "." *)
   | Mod -> "%"
   | LShift -> "<<"
   | RShift -> ">>"

@@ -37,7 +37,7 @@ and sx =
   | SListCompConditional of sexpr * svariable * sexpr * sexpr
   | SDictCompConditional of sexpr * sexpr * svariable * svariable * sexpr * sexpr
   | SDictCompUnconditional of sexpr * sexpr * svariable * svariable * sexpr
-  | SDict of sexpr * sexpr list
+  | SDict of (sexpr * sexpr) list
   | SBinop of sexpr * bop * sexpr
   | SWalrus of svariable * sexpr
   | SFuncCall of svariable * sexpr list

@@ -1,3 +1,5 @@
+(*TODO: add binops to scanner, no-op binop*)
+
 open Ast
 open Sast
 
@@ -73,57 +75,75 @@ let check (globals, functions) =
     in
 
     (* Return a variable from our local symbol table *)
-    let type_of_identifier s =
-      try StringMap.find s symbols
+    let type_of_identifier s symbol_table =
+      try StringMap.find s symbol_table
       with Not_found -> raise (Failure ("undeclared identifier " ^ s))
     in
 
-    (*Checks the type of var *)
+    (* Return a tuple of a fun_table and a var_table from our class table *)
+    let class_details s class_table =
+      try StringMap.find s class_table
+      with Not_found -> raise (Failure ("undeclared class " ^ s))
+    in
 
+    (*Checks the type of var *)
+    (* Function table contains a key of the function name which points to a tuple of a list of args and the return type *)
+    (* Variable table contains a key of the variable name which points to a typevar *)
+    (* Class table contains a key of the class name which points to a tuple of a function table and variable table *)
     (* Return a semantically-checked expression, i.e., with a type *)
-    let rec check_expr symbol_table = function
-        IntLit l -> (Int, SIntLit l)
-      | BoolLit l -> (Bool, SBoolLit l)
-      | StringLit l -> (String, SStringLit l)
-      | SVarExpr var -> (check the type of var, SVarExpr (convert var to svar type))
-      | List () -> () (** TODO **)
+    let rec check_expr var_table func_table class_table = function
+        IntLit l -> (TypeVariable("int"), SIntLit l)
+      | BoolLit l -> (TypeVariable("bool"), SBoolLit l)
+      | StringLit l -> (TypeVariable("string") , SStringLit l)
+      (*| SVarExpr var -> (check the type of var, SVarExpr (convert var to svar type))*)
+      | VarExpr var -> match var with
+        | Var(v) -> (StringMap.find v var_table, SVar v)
+        | VarDot(v1, v2) -> let (v1_typevar, v1_sem) = check_expr v1 ar_table func_table class_table in
+          let (_, var_table) = class_details (string_of_typevar v1_typevar) class_table in 
+          let typ = StringMap.find v2 var_table
+          in (typ, SVarDot((v1_typevar, v1_sem), check_expr v2 var_table func_table class_table))
+
+        | VarIndex(v1, e) -> let (t, sx) = check_expr v1 var_table func_table class_table in match t with
+          | Dict(key_type, value_type) ->
+          let (typvar, _) = check_expr e var_table func_table class_table in 
+          if key_type = typvar then (value_type, SVarIndex(t, sx))
+          else raise (Failure ("Invalid dictionary indexing"))
+          | List(list_type) ->
+          let (typvar, _) = check_expr e var_table func_table class_table in 
+          if typvar = TypeVariable("int") then (list_type, SVarIndex(t, sx))
+          else raise (Failure ("Invalid indexing: " ^ string_of_var VarIndex(v1, e)))
+      | List (e) -> list_check e symbol_table func_table
       | ListCompUnconditional (expr, loop_var, loop_list) -> 
-        let (loop_type, _) = check_expr symbol_table loop_list in
+        let (loop_type, _) = check_expr symbol_table func_table class_table loop_list in
         match loop_type with
         List (elem_type) -> (** Only doing lists **)
-          let (expr_type, _) = check_expr (StringMap.add loop_var elem_type symbol_table) expr in
-          (expr_type, )
+          let (expr_type, _) = check_expr (StringMap.add loop_var elem_type symbol_table) func_table class_table expr in
+          (List(expr_type), SListCompUnconditional(check_expr expr, check_expr symbol_table loop_var, check_expr symbol_table loop_list))
         _ -> raise (Failure ("List comprehension depends on non-list object"))
-      | ListConditional () ->
+      | ListCompConditional (expr, loop_var, loop_list, condition) -> 
+        let (loop_type, _) = check_expr symbol_table  func_table class_table loop_list in
+        match loop_type with
+        List (elem_type) -> (** Only doing lists **)
+          let (expr_type, _) = check_expr (StringMap.add loop_var elem_type symbol_table) func_table class_table expr in
+          let (condition_type, _) = check_expr (StringMap.add loop_var elem_type symbol_table) func_table class_table condition in
+          if (condition_type != TypeVariable("bool")) then raise (Failure ("List comprehension condition depends on non-boolean object"))
+          else
+          (List(expr_type), SListCompConditional(check_expr expr, check_expr symbol_table loop_var, check_expr symbol_table loop_list, check_expr symbol_table condition))
+        _ -> raise (Failure ("List comprehension depends on non-list object"))
       | Id var -> (type_of_identifier var, SId var)
-      | Assign(var, e) as ex ->
-        let lt = type_of_identifier var
+      | Walrus(var, e) as ex ->
+        let lt = type_of_identifier var symbol_table
         and (rt, e') = check_expr e in
         let err = "illegal assignment " ^ string_of_typ lt ^ " = " ^
                   string_of_typ rt ^ " in " ^ string_of_expr ex
         in
         (check_assign lt rt err, SAssign(var, (rt, e')))
+      | Binop(e1, op, e2) as e -> binop_check e1 op e2 symbol_table func_table class_table: StringMap
+      | FuncCall(fname, args) as call ->
+      (* fname can be just a string (in which case we look up func_table)
+      VarDot(variable * variable) ?
+          *)
 
-      | Binop(e1, op, e2) as e ->
-        let (t1, e1') = check_expr e1
-        and (t2, e2') = check_expr e2 in
-        let err = "illegal binary operator " ^
-                  string_of_typ t1 ^ " " ^ string_of_op op ^ " " ^
-                  string_of_typ t2 ^ " in " ^ string_of_expr e
-        in
-        (* All binary operators require operands of the same type*)
-        if t1 = t2 then
-          (* Determine expression type based on operator and operand types *)
-          let t = match op with
-              Add | Sub when t1 = Int -> Int
-            | Equal | Neq -> Bool
-            | Less when t1 = Int -> Bool
-            | And | Or when t1 = Bool -> Bool
-            | _ -> raise (Failure err)
-          in
-          (t, SBinop((t1, e1'), op, (t2, e2')))
-        else raise (Failure err)
-      | Call(fname, args) as call ->
         let fd = find_func fname in
         let param_length = List.length fd.formals in
         if List.length args != param_length then
@@ -176,21 +196,77 @@ let check (globals, functions) =
   in
   (globals, List.map check_func functions)
 
-
-let rec list_check_helper (list_elems: expr list) (symbol_table: StringMap) (head_type: typevar) = 
+let rec list_to_sexpr (list_elems: expr list) (symbol_table: StringMap) (func_table: StringMap) (head_type: typevar) (list_so_far: sexpr_list) = 
   match list_elems with
-  | [] -> head_type
+  | [] -> list_so_far
   | head :: tail -> 
-    if valid_type (check_expr symbol_table head) head_type then
-      list_check_helper tail symbol_table head_type
-    else
-      raise (Failure "Value not of type" ^ type_to_string head_type)
+    let (t,_) = check_expr head in
+    match head_sexpr with
+    (t,_) -> 
+      if (t != head_type) then raise (Failure "Type mismatch in list")
+      else
+        list_to_sexpr tail symbol_table func_table func_table head_type (list_so_far :: head_sexpr)
 in
   (*will return an option type, the calling function should check if its None because thnen any type is valid*)
-let list_check (list_elems: expr list) (symbol_table: StringMap) = 
+let list_check (list_elems: expr list) (symbol_table: StringMap) (func_table: StringMap) = 
   match list_elems with
   |[] -> return None
   | head :: tail -> 
-    let head_type = check_expr symbol_table head in
-      list_check_helper tail symbol_table head_type
-      
+      let head_sexpr = check_expr head in
+        match head_sexpr with
+        (t,_) -> list_to_sexpr tail symbol_table func_table t [head_sexpr];;
+
+let binop_return_type t1 op t2= 
+  match op with
+  | Add | Sub  ->
+    (match (t1,t2) with 
+    | (TypeVariable("int"), TypeVariable("int")) -> TypeVariable("int")
+    | (TypeVariable("float"), TypeVariable("float")) -> TypeVariable("float")
+    | (TypeVariable("float"), TypeVariable("int")) -> TypeVariable("float")
+    | (TypeVariable("int"), TypeVariable("float")) -> TypeVariable("float")
+    | (_,_) -> raise (Failure "Invalid binop types"))
+  | Eq | Neq | Less ->
+    | (TypeVariable("int"), TypeVariable("int")) -> TypeVariable("bool")
+    | (TypeVariable("float"), TypeVariable("float")) -> TypeVariable("bool")
+    | (TypeVariable("float"), TypeVariable("int")) -> TypeVariable("bool")
+    | (TypeVariable("int"), TypeVariable("float")) -> TypeVariable("bool")
+  | Mod | LShif | RShift ->    
+    (match (t1,t2) with
+    | (TypeVariable("int"), TypeVariable("int")) -> TypeVariable("int")
+    | (TypeVariable("float"), TypeVariable("int")) -> TypeVariable("float")
+    | (_,_) -> raise (Failure "Invalid binop types"))
+  | And | Or ->
+   ( match (t1,t2) with
+    | (TypeVariable("bool"), TypeVariable("bool")) -> true
+    | (_,_) -> raise (Failure "Invalid binop types"))
+  | BitAnd | BitOr | BitXor-> 
+   ( match (t1,t2) with
+    | (TypeVariable("int"), TypeVariable("int")) -> TypeVariable("int")
+    | (TypeVariable("float"), TypeVariable("float")) -> TypeVariable("float")
+    | (_,_) -> raise (Failure "Invalid binop types"))
+  | _ -> raise (Failure "Unknown binop found") in
+
+let binop_check (e1: expr) (operation: bop) (e2: expr) (symbol_table: StringMap) (func_table: StringMap) (class_table: StringMap) = 
+  let (t1,_) = check_expr symbol_table func_table class_table e1 in
+  let s1 = SExpr(t1,e1) in
+  let (t2,_) = check_expr symbol_table func_table class_table e2 in
+  let s2 = SExpr(t2,e2) in
+  let rtype = binop_return_type t1 bop t2 in
+  SBinop(s1,bop,s2)
+
+  Add | Sub | Eq | Neq | Less | And | Or | BitAnd | BitOr | LShift | RShift | Mod | BitXor
+let assignment_to_bop special_assignment = 
+  match special_assignment with 
+  | IdentityAssign -> (*TODO: add a no-op binop*)
+  | PlusAssign -> Add
+  | MinusAssign -> Sub
+  | TimesAssign -> 
+  | DivideAssign
+  | FloorDivAssign
+  | ExpAssign
+  | AndAssign
+  | OrAssign
+  | XorAssign
+  | RShiftAssign
+  | LShiftAssign
+  | ModAssign
