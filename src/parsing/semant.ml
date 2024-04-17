@@ -10,9 +10,9 @@ module StringMap = Map.Make(String)
 
    Check each global variable, then check each function *)
 
-let check (globals, functions) =
+let check (blocks) =
 
-  (* Verify a list of bindings has no duplicate names *)
+  (* Verify a list of bindings has no duplicate names
   let check_binds (kind : string) (binds : (typ * string) list) =
     let rec dups = function
         [] -> ()
@@ -22,32 +22,32 @@ let check (globals, functions) =
     in dups (List.sort (fun (_,a) (_,b) -> compare a b) binds)
   in
 
-  (* Make sure no globals duplicate *)
-  check_binds "global" globals;
+  (* Make sure no blocks duplicate *)
+  check_binds "block" blocks; *)
 
   (* Collect function declarations for built-in functions: no bodies *)
-  let built_in_decls =
+  (* let built_in_decls =
     StringMap.add "print" {
       rtyp = Int;
       fname = "print";
       formals = [(Int, "x")];
       locals = []; body = [] } StringMap.empty
-  in
+  in *)
 
   (* Add function name to symbol table *)
   let add_func map fd =
-    let built_in_err = "function " ^ fd.fname ^ " may not be defined"
-    and dup_err = "duplicate function " ^ fd.fname
+    let (fname, args, ret_type) = fd in
+    let built_in_err = "function " ^ fname ^ " may not be defined"
+    and dup_err = "duplicate function " ^ fname
     and make_err er = raise (Failure er)
-    and n = fd.fname (* Name of the function *)
     in match fd with (* No duplicate functions or redefinitions of built-ins *)
-      _ when StringMap.mem n built_in_decls -> make_err built_in_err
+     (n, _, _) when StringMap.mem n built_in_decls -> make_err built_in_err
     | _ when StringMap.mem n map -> make_err dup_err
     | _ ->  StringMap.add n fd map
   in
 
   (* Collect all function names into one symbol table *)
-  let function_decls = List.fold_left add_func built_in_decls functions
+  let function_decls = List.fold_left add_func StringMap.empty functions
   in
 
   (* Return a function from our symbol table *)
@@ -86,7 +86,29 @@ let check (globals, functions) =
       with Not_found -> raise (Failure ("undeclared class " ^ s))
     in
 
-    (*Checks the type of var *)
+    List.fold_left (fun ) (StringMap.empty StringMap.empty StringMap.empty)
+    let rec check_block var_table func_table class_table = function
+      BlockAssign(v, s, e) -> SBlockAssign(check_expr v, s, e)
+      | Break
+      | Continue
+      | Pass
+      | VarDec
+      | ReturnVal
+      | ReturnVoid
+      | While
+      | For
+      | FuncBlockCall
+      | FunctionSignature
+      | FunctionDefinition
+      | InterfaceDefinition
+      | ClassDefinition
+      | ClassDefinitionImplements
+      | IfEnd
+      | IfNonEnd
+      | ElifEnd
+      | ElifNonEnd
+      | ElseEnd
+
     (* Function table contains a key of the function name which points to a tuple of a list of args and the return type *)
     (* Variable table contains a key of the variable name which points to a typevar *)
     (* Class table contains a key of the class name which points to a tuple of a function table and variable table *)
@@ -102,7 +124,6 @@ let check (globals, functions) =
           let (_, var_table) = class_details (string_of_typevar v1_typevar) class_table in 
           let typ = StringMap.find v2 var_table
           in (typ, SVarDot((v1_typevar, v1_sem), check_expr v2 var_table func_table class_table))
-
         | VarIndex(v1, e) -> let (t, sx) = check_expr v1 var_table func_table class_table in match t with
           | Dict(key_type, value_type) ->
           let (typvar, _) = check_expr e var_table func_table class_table in 
@@ -200,21 +221,21 @@ let rec list_to_sexpr (list_elems: expr list) (symbol_table: StringMap) (func_ta
   match list_elems with
   | [] -> list_so_far
   | head :: tail -> 
-    let (t,_) = check_expr head in
+    let head_sexpr = check_expr symbol_table func_table class_table head in
     match head_sexpr with
     (t,_) -> 
-      if (t != head_type) then raise (Failure "Type mismatch in list")
+      (if (t != head_type) then raise (Failure "Type mismatch in list")
       else
-        list_to_sexpr tail symbol_table func_table func_table head_type (list_so_far :: head_sexpr)
+        list_to_sexpr tail symbol_table func_table func_table head_type (list_so_far :: head_sexpr))
 in
   (*will return an option type, the calling function should check if its None because thnen any type is valid*)
-let list_check (list_elems: expr list) (symbol_table: StringMap) (func_table: StringMap) = 
+let check_list (list_elems: expr list) (symbol_table: StringMap) (func_table: StringMap) = 
   match list_elems with
   |[] -> return None
   | head :: tail -> 
-      let head_sexpr = check_expr head in
+      let head_sexpr = check_expr symbol_table func_table class_table head in
         match head_sexpr with
-        (t,_) -> list_to_sexpr tail symbol_table func_table t [head_sexpr];;
+        (t,_) -> SList(list_to_sexpr tail symbol_table func_table t [head_sexpr]);;
 
 let binop_return_type t1 op t2= 
   match op with
@@ -246,27 +267,38 @@ let binop_return_type t1 op t2=
     | (_,_) -> raise (Failure "Invalid binop types"))
   | _ -> raise (Failure "Unknown binop found") in
 
-let binop_check (e1: expr) (operation: bop) (e2: expr) (symbol_table: StringMap) (func_table: StringMap) (class_table: StringMap) = 
+let check_binop (e1: expr) (operation: bop) (e2: expr) (symbol_table: StringMap) (func_table: StringMap) (class_table: StringMap) = 
   let (t1,_) = check_expr symbol_table func_table class_table e1 in
   let s1 = SExpr(t1,e1) in
   let (t2,_) = check_expr symbol_table func_table class_table e2 in
   let s2 = SExpr(t2,e2) in
   let rtype = binop_return_type t1 bop t2 in
-  SBinop(s1,bop,s2)
+  SBinop(s1,bop,s2);;
 
-  Add | Sub | Eq | Neq | Less | And | Or | BitAnd | BitOr | LShift | RShift | Mod | BitXor
+
 let assignment_to_bop special_assignment = 
   match special_assignment with 
   | IdentityAssign -> (*TODO: add a no-op binop*)
   | PlusAssign -> Add
   | MinusAssign -> Sub
-  | TimesAssign -> 
-  | DivideAssign
-  | FloorDivAssign
-  | ExpAssign
-  | AndAssign
-  | OrAssign
-  | XorAssign
-  | RShiftAssign
-  | LShiftAssign
-  | ModAssign
+  | TimesAssign -> (*TODO: add a mult binop*)
+  | DivideAssign -> (*TODO: add a div binop*)
+  | FloorDivAssign -> (*TODO: add a floor div binop*)
+  | ExpAssign -> (*TODO: add a exp binop*)
+  | AndAssign -> And
+  | OrAssign -> Or
+  | XorAssign -> (*TODO: add a xor binop*)
+  | RShiftAssign -> RShift
+  | LShiftAssign -> LShift
+  | ModAssign -> Mod
+  | _ -> raise (Failure "Unknown binop found");;
+
+
+  (*BlockAssign of variable * special_assignment * expr*)
+  let check_assign (lvalue: variable) (assign_type: special_assignment) (rvalue: expr) (symbol_table: StringMap) (func_table: StringMap) (class_table: StringMap) =
+    let bop = assignment_to_bop assign_type in
+    let rvalue_sexpr = check_expr symbol_table func_table class_table rvalue in
+    let lvalue_type = type_of_identifier lvalue symbol_table in
+    let binop_sexpr = check_binop lvalue bop rvalue symbol_table func_table class_table in
+    match binop_sexpr with 
+    | (t,_) -> 
