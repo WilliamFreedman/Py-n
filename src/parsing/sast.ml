@@ -8,20 +8,8 @@ type typevar = Dict of typevar * typevar
 *)
    
 
-type sspecial_assignment = 
-  SIdentityAssign
-  | SPlusAssign
-  | SMinusAssign
-  | STimesAssign
-  | SDivideAssign
-  | SFloorDivAssign
-  | SExpAssign
-  | SAndAssign
-  | SOrAssign
-  | SXorAssign
-  | SRShiftAssign
-  | SLShiftAssign
-  | SModAssign
+type sassignment = 
+  SAssign
 
 (** Variable / term indicator, with dots and indexing **)
 type svariable = SVar of string | SVarDot of svariable * svariable | SVarIndex of svariable * sexpr
@@ -53,7 +41,7 @@ type sfunction_signature = svariable * sarg list * typevar
 
 
 type sblock =
-    SBlockAssign of svariable * sspecial_assignment * sexpr
+    SBlockAssign of svariable * sassignment * sexpr
   | SBreak
   | SContinue
   | SPass
