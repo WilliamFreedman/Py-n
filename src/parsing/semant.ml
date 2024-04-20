@@ -304,4 +304,4 @@ let assignment_to_bop special_assignment =
     | (t1,_) -> (match lvalue_sexpr with 
     | (t2,_) -> if (t1 != t2) then raise (Failure "Improperly typed assignment")
      else
-        SBlockAssign(lvalue_sexpr, SAssign, binop_sexpr))
+        SBlockAssign(lvalue_sexpr, SAssign, binop_sexpr));;
