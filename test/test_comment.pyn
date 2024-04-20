@@ -1,0 +1,3 @@
+x:int = 7 # single line comment
+
+# our language does not support multiline comments

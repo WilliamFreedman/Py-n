@@ -1,4 +1,4 @@
-type bop = Add | Sub | Eq | Neq | Less | And | Or | BitAnd | BitOr | LShift | RShift | Mod | BitXor (*| ArrayGet | Dot *)
+type bop = Iden | Add | Sub | Mult | Div | FDiv |  Eq | Exp | Neq | Less | And | Or | Xor | BitAnd | BitOr | LShift | RShift | Mod | BitXor (*| ArrayGet | Dot *)
 
 (** Types in our language **)
 type typevar = Dict of typevar * typevar
@@ -21,7 +21,7 @@ type special_assignment =
   | ModAssign
 
 (** Variable / term indicator, with dots and indexing **)
-type variable = Var of string | VarDot of variable * variable | VarIndex of variable * expr
+type variable = Var of string (*| VarDot of variable * variable *)| VarIndex of variable * expr
 and expr =
   BoolLit of bool
   | IntLit of int
@@ -31,15 +31,15 @@ and expr =
   | List of expr list
   | ListCompUnconditional of expr * variable * expr
   | ListCompConditional of expr * variable * expr * expr
-  | DictCompConditional of expr * expr * variable * variable * expr * expr
-  | DictCompUnconditional of expr * expr * variable * variable * expr
-  | Dict of (expr * expr) list
+  | DictCompConditional of expr * expr * variable * variable * expr * expr (*todo*)
+  | DictCompUnconditional of expr * expr * variable * variable * expr (*todo*)
+  | Dict of (expr * expr) list (*todo*)
   | Binop of expr * bop * expr
   | Walrus of variable * expr
   | FuncCall of variable * expr list
   (** | IndexingVar of variable * expr **)
-  | IndexingStringLit of string * expr
-  | IndexingExprList of expr * expr
+  | IndexingStringLit of string * expr (*todo*)
+  | IndexingExprList of expr * expr (*todo*)
   (** | Return of expr **)
 
 (*{DictCompUnconditional($2, $4, Var(6), Var($8), $10, 12$)}*)
@@ -75,14 +75,19 @@ type program = {
 
 (* Pretty-printing functions *)
 let string_of_op = function
-    Add -> "+"
+  | Iden -> "="
+  | Add -> "+"
   | Sub -> "-"
+  | Div -> "//"
+  | Mult -> "*"
+  | FDiv -> "/"
+  | Exp -> "**"
   | Eq -> "=="
   | Neq -> "!="
   | Less -> "<"
   | And -> "&&"
   | Or -> "||"
-  (* | Dot -> "." *)
+  | Xor -> "^"
   | Mod -> "%"
   | LShift -> "<<"
   | RShift -> ">>"
@@ -107,7 +112,7 @@ IdentityAssign -> "="
 
 let rec string_of_var = function
     Var(v) -> v
-    | VarDot(v1, v2) -> string_of_var v1 ^ "." ^ string_of_var v2
+    (**| VarDot(v1, v2) -> string_of_var v1 ^ "." ^ string_of_var v2*)
     | VarIndex(v, e) -> string_of_var v ^ "[" ^ string_of_expr e ^ "]"
 and string_of_expr = function
     IntLit(l) -> string_of_int l

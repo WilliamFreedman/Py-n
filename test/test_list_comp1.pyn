@@ -1,0 +1,3 @@
+numbers [int] = [1, 2, 3, 4]
+doubled_numbers : List[int] = [num * 2 for num in numbers]
+print(doubled_numbers)

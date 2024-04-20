@@ -12,7 +12,7 @@ type sassignment =
   SAssign
 
 (** Variable / term indicator, with dots and indexing **)
-type svariable = SVar of string | SVarDot of svariable * svariable | SVarIndex of svariable * sexpr
+type svariable = SVar of string (*| SVarDot of svariable * svariable *) | SVarIndex of svariable * sexpr
 and sexpr = typevar * sx
 and sx = 
   SBoolLit of bool
@@ -84,7 +84,7 @@ SIdentityAssign -> "="
 
 let rec string_of_svar = function
     SVar(v) -> v
-    | SVarDot(v1, v2) -> string_of_svar v1 ^ "." ^ string_of_svar v2
+    (* | SVarDot(v1, v2) -> string_of_svar v1 ^ "." ^ string_of_svar v2 *)
     | SVarIndex(v, e) -> string_of_svar v ^ "[" ^ string_of_sexpr e ^ "]"
 and string_of_sexpr (t, e) =
   "(" ^ string_of_typevar t ^ " : " ^ (match e with

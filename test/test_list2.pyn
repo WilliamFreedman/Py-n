@@ -1,0 +1,4 @@
+languages: List[str] = ["python", "ocaml", "c" ] 
+
+for language in languages:
+  print(language)

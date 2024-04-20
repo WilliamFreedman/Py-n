@@ -1,0 +1,6 @@
+def check_pass(int grade):
+    if (grade >= 50):
+        return "Pass"
+    else:
+        return "Fail"
+print(check_pass(55))

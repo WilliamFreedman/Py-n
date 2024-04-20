@@ -93,7 +93,7 @@ typename:
 (** VARIABLE: Just a string, variable: string.string string[blah blah] **)
 variable:
     VARIABLE                        { Var($1)           }
-    | variable DOT variable         { VarDot($1, $3)    }
+    // | variable DOT variable         { VarDot($1, $3)    }
     | variable LBRACK expr RBRACK   { VarIndex($1, $3)  }
 
 assignment:
@@ -187,7 +187,7 @@ while_loop:
 	WHILE expr COLON newline_list INDENT block_list DEDENT  { While($2, $6) }
 
 for_loop:
-	FOR VARIABLE IN expr COLON NEWLINE INDENT block_list    { For(Var($2), $4, $8)  }
+	FOR VARIABLE IN expr COLON NEWLINE INDENT block_list DEDENT   { For(Var($2), $4, $8)  }
 	
 interface_definition:
 	INTERFACE VARIABLE COLON newline_list INDENT func_signature_list DEDENT     { InterfaceDefinition(Var($2), $6)  }
