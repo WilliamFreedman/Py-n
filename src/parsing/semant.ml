@@ -298,7 +298,10 @@ let assignment_to_bop special_assignment =
   let check_assign (lvalue: variable) (assign_type: special_assignment) (rvalue: expr) (symbol_table: StringMap) (func_table: StringMap) (class_table: StringMap) =
     let bop = assignment_to_bop assign_type in
     let rvalue_sexpr = check_expr symbol_table func_table class_table rvalue in
-    let lvalue_type = type_of_identifier lvalue symbol_table in
+    let lvalue_sexpr = check_variable symbol_table func_table class_table lvalue in
     let binop_sexpr = check_binop lvalue bop rvalue symbol_table func_table class_table in
     match binop_sexpr with 
-    | (t,_) -> 
+    | (t1,_) -> (match lvalue_sexpr with 
+    | (t2,_) -> if (t1 != t2) then raise (Failure "Improperly typed assignment")
+     else
+        SBlockAssign(lvalue_sexpr, SAssign, binop_sexpr))
