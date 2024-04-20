@@ -60,9 +60,13 @@ type block =
   | FuncBlockCall of variable * expr list
   | FunctionSignature of function_signature
   | FunctionDefinition of function_signature * block list 
+  (*
   | InterfaceDefinition of variable * function_signature list
+  *)
+  (*
   | ClassDefinition of variable * block list
   | ClassDefinitionImplements of variable * variable list * block list
+  *)
   | IfEnd of expr * block list
   | IfNonEnd of expr * block list * block
   | ElifEnd of expr * block list
@@ -171,12 +175,14 @@ let rec string_of_block = function
   | Break -> "break\n"
   | Continue -> "continue\n"
   | Pass -> "pass\n"
+  (* 
   | InterfaceDefinition(v, sig_list) ->
   "interface " ^ string_of_var v ^ ":\n" ^  String.concat "\n" (List.map string_of_func_sig sig_list) ^ "\n"
   | ClassDefinition(v, block_list) ->
     "class " ^ string_of_var v ^ ":\n" ^  String.concat "\n" (List.map string_of_block block_list) ^ "\n"
   | ClassDefinitionImplements(v, interfaces, block_list) ->
     "class " ^ string_of_var v ^ " implements " ^ String.concat ", " (List.map string_of_var interfaces) ^ ":\n" ^  String.concat "\n" (List.map string_of_block block_list) ^ "\n"
+  *)
   | IfEnd(e, bl) -> "if " ^ string_of_expr e ^ ":\n" ^ String.concat "\n" (List.map string_of_block bl) ^ "\n"
   | IfNonEnd(e, bl, nbl) -> "if " ^ string_of_expr e ^ ":\n" ^ String.concat "\n" (List.map string_of_block bl) ^ string_of_block nbl
   | ElifEnd(e, bl) -> "elif " ^ string_of_expr e ^ ":\n" ^ String.concat "\n" (List.map string_of_block bl) ^ "\n"

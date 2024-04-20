@@ -25,18 +25,6 @@ in
 check_binds "block" blocks; *)
 
 
-(* Add function name to symbol table *)
-let add_func map fd =
-  let (fname, args, ret_type) = fd in
-  let built_in_err = "function " ^ fname ^ " may not be defined"
-  and dup_err = "duplicate function " ^ fname
-  and make_err er = raise (Failure er)
-  in match fd with (* No duplicate functions or redefinitions of built-ins *)
-    (n, _, _) when StringMap.mem n built_in_decls -> make_err built_in_err
-  | _ when StringMap.mem n map -> make_err dup_err
-  | _ ->  StringMap.add n fd map
-in
-
 (* Collect all function names into one symbol table *)
 let function_decls = List.fold_left add_func StringMap.empty functions
 in
@@ -171,7 +159,7 @@ let binop_return_type t1 op t2=
     | (TypeVariable("float"), TypeVariable("int")) -> TypeVariable("bool")
     | (TypeVariable("int"), TypeVariable("float")) -> TypeVariable("bool")
     | (_,_) -> raise (Failure "Invalid binop types"))
-  | Mod | LShif | RShift ->    
+  | Mod | LShif | RShift -> 
     (match (t1,t2) with
     | (TypeVariable("int"), TypeVariable("int")) -> TypeVariable("int")
     | (TypeVariable("float"), TypeVariable("int")) -> TypeVariable("float")
@@ -198,7 +186,7 @@ let check_binop (e1: expr) (operation: bop) (e2: expr) (symbol_table: StringMap)
   let s1 = SExpr(t1,e1) in
   let (t2,_) = check_expr symbol_table func_table e2 in
   let s2 = SExpr(t2,e2) in
-  let rtype = binop_return_type t1 bop t2 in
+  let rtype = binop_return_type t1 operation t2 in
   (rtype, SBinop(s1,bop,s2));;
 
 
@@ -219,18 +207,18 @@ let assignment_to_bop special_assignment =
   | ModAssign -> Mod
   | _ -> raise (Failure "Unknown binop found");;
 
+let check_variable = (*WILLIAM WILL DO THIS IF I FORGET YELL AT ME*)
 
   (*BlockAssign of variable * special_assignment * expr*)
   let check_assign (lvalue: variable) (assign_type: special_assignment) (rvalue: expr) (symbol_table: StringMap) (func_table: StringMap) =
     let bop = assignment_to_bop assign_type in
-    let rvalue_sexpr = check_expr symbol_table func_table rvalue in
-    let lvalue_sexpr = check_variable symbol_table func_table lvalue in
+    let rvalue_sexpr = check_expr symbol_table func_table rvalue in 
+    let lvalue_type = check_variable symbol_table func_table lvalue in
     let binop_sexpr = check_binop lvalue bop rvalue symbol_table func_table in
     match binop_sexpr with 
-    | (t1,_) -> (match lvalue_sexpr with 
-    | (t2,_) -> if (t1 != t2) then raise (Failure "Improperly typed assignment")
-     else
-        SBlockAssign(lvalue_sexpr, SAssign, binop_sexpr));;
+    | (t1,_) -> ((t1 != lvalue_type) then raise (Failure "Improperly typed assignment")
+     else 
+        SBlockAssign(lvalue, SAssign, binop_sexpr));;
     
   let check_list_comprehension (comp: expr) (symbol_table: StringMap.t) (func_table: StringMap.t)  =
   match comp with
@@ -314,64 +302,94 @@ let function_declaration_helper (symbol_table: StringMap.t) (func_table: StringM
 (* func_return_type: typevar option for the return type of the current function (None if we aren't in a function) *)
 (* and the Ast block type *)
 
+
+(* Return list of sblocks given blocks *)
+let check_block_list allowed_block_set var_table func_table func_return_type = function
+  | [] -> []
+  | x :: xs -> let (v_t, f_t, sblock) = check_block allowed_block_set var_table func_table func_return_type x in sblock :: check_block_list v_t f_t xs
+
 (* It returns a tuple of the var_table * func_table * Sast block *)
 
 in let rec check_block allowed_block_set var_table func_table func_return_type = function
   BlockAssign(v, s, e) -> check_assign v s e symbol_table func_table
   | Break ->
-    match StringSet.find "Break" allowed_block_set with
+    match StringSet.find_opt "Break" allowed_block_set with
     | Some _ -> (var_table, func_table, SBreak)
     | None -> raise (Failure ("Break must be specified within a loop."))
   | Continue ->
-    match StringSet.find "Continue" allowed_block_set with
+    match StringSet.find_opt "Continue" allowed_block_set with
     | Some _ -> (var_table, func_table, SContinue)
     | None -> raise (Failure ("Continue must be specified within a loop."))
   | Pass ->
-    match StringSet.find "Pass" allowed_block_set with
+    match StringSet.find_opt "Pass" allowed_block_set with
     | Some _ -> (var_table, func_table, SPass)
     | None -> raise (Failure ("Pass must be specified within a function / loop / conditional."))
   | ReturnVal(Expr(expr)) -> 
-    match StringSet.find "ReturnVal" allowed_block_set with
+    match StringSet.find_opt "ReturnVal" allowed_block_set with
     | None | func_return_type = None -> raise (Failure ("Return must be specified within a function."))
     | Some _ when let (t, e) = check_expr var_table func_table expr in t = func_return_type -> (var_table, func_table, SReturnVal(SExpr(t, e)))
   | ReturnVoid -> 
-    match StringSet.find "ReturnVoid" allowed_block_set with
+    match StringSet.find_opt "ReturnVoid" allowed_block_set with
     | None | func_return_type = None -> raise (Failure ("Return must be specified within a function."))
     | Some _ when func_return_type = TypeVariable("void") -> (var_table, func_table, SReturnVoid)
   | VarDec(typ, var, expr) -> 
+    let new_map = variable_declaration_helper symbol_table func_table in
+    let rvalue_sexpr = check_expr var_able func_table expr in
+    let var_dec_to_return = SVarDec (typ,Svar(var),rvalue_sexpr)
+    (var_table, func_table, var_dec_to_return)
 
   | While(loop_expr, loop_block_list) -> 
     (* Make sure the expression is a bool type, 
        then recurse in the block list w/ breaks + continues + passes *)
-      match check_expr loop_expr with
-      | (TypeVariable("bool"), _) ->
+      let loop_sexpr = check_expr loop_expr in
+      match loop_sexpr with
+      | (TypeVariable("bool"), loop_sx) ->
       let new_allowed_block_set = StringSet.add "Break" (StringSet.add "Continue" (StringSet.add "Pass" allowed_block_set)) in 
-      (* Sequential flow in the blocks *)
+      let sblock_list = check_block_list new_allowed_block_set var_table func_table func_return_type loop_block_list in
+      (var_table, func_table, SWhile(loop_sexpr, sblock_list))
       | _ -> raise (Failure ((string_of_expr loop_expr) ^ "is not of type bool."))
 
   | For(loop_var, loop_expr, loop_block_list) -> 
     (* Make sure the loop_expr is a list wrapper type, 
        then sequentially eval the block list w/ breaks + continues + passes + loop_var in scope *)
-    match check_expr loop_expr with 
-      | (List(sub_type), _) ->
+    let loop_sexpr = check_expr loop_expr in
+    match loop_sexpr with 
+      | (List(sub_type), loop_sx) ->
       let new_var_table = StringMap.add loop_var sub_type var_table in
       let new_allowed_block_set = StringSet.add "Break" (StringSet.add "Continue" (StringSet.add "Pass" allowed_block_set)) in
-      // (* Sequential flow in the blocks *)
+      let sblock_list = check_block_list new_allowed_block_set new_var_table func_table func_return_type loop_block_list in
+      (var_table, func_table, SFor(, loop_sexpr, sblock_list))
       | _ -> raise (Failure ((string_of_expr loop_expr) ^ " is not a list type."))
-
-  | FuncBlockCall
-  | FunctionSignature
-  | FunctionDefinition
-  | IfEnd 
-  | IfNonEnd
-  | ElifEnd
-  | ElifNonEnd
-  | ElseEnd
+    
+  | FuncBlockCall(fname, args) -> check_func_call symbol_table func_table fname args
+  (* | FunctionSignature *)
+  | FunctionDefinition(func_sig, block_list) -> 
+    let (variable, arg_list, typevar) = func_sig
+    let sfunc_sig = (check_expr var_table func_table variable, )
+    
+  | IfEnd(expr, blocks) -> 
+    let (t, e) = check_expr var_table func_table expr in
+    let sblock_list = check_block_list allowed_block_set var_table func_table func_return_type in
+    SIfEnd(SExpr(t, e), sblock_list)
+  | IfNonEnd(expr, block_list, block) ->
+    let (t, e) = check_expr var_table func_table expr in
+    let sblock_list = check_block_list allowed_block_set var_table func_table func_return_type in
+    SIfNonEnd(SExpr(t, e), sblock_list, check_block new_allowed_block_set var_table func_table func_return_type block)
+  | ElifEnd(expr, blocks) -> 
+    let (t, e) = check_expr var_table func_table expr in
+    let sblock_list = check_block_list allowed_block_set var_table func_table func_return_type in
+    SElifEnd(SExpr(t, e), sblock_list)
+  | ElifNonEnd(expr, block_list, block) ->
+    let (t, e) = check_expr var_table func_table expr in
+    let sblock_list = check_block_list allowed_block_set var_table func_table func_return_type in
+    SElifNonEnd(SExpr(t, e), sblock_list, check_block new_allowed_block_set var_table func_table func_return_type block)
+  | ElseEnd(expr, block_list) ->
+    let (t, e) = check_expr var_table func_table expr in
+    let sblock_list = check_block_list allowed_block_set var_table func_table func_return_type in
+    SElseEnd(SExpr(t, e), sblock_list)
   | _ as c -> raise (Failure ("Unsupported block type " ^ c))
 (*| InterfaceDefinition
 | ClassDefinition
 | ClassDefinitionImplements *)
 
-in let check var_table func_table blocks = 
-  | [] -> []
-  | x :: xs -> let (v_t, f_t, sblock) = check_block (StringSet.empty, StringMap.empty, StringMap.empty, None) x in sblock :: check v_t f_t xs
+in let check var_table func_table block_list = check_block_list StringSet.empty StringMap.empty StringMap.empty None block_list

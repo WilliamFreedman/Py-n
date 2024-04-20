@@ -68,8 +68,8 @@ rule tokenize = parse
 | "from" {  FROM  }
 | "while" { WHILE  }
 | "for" { FOR }
-| "interface" { INTERFACE }
-| "class" { CLASS }
+(* | "interface" { INTERFACE } *) 
+(* | "class" { CLASS } *)
 | "None" { NONE }
 | "INDENT" { INDENT }
 | "int" { INT }

@@ -1,18 +1,12 @@
 open Ast
 
-(** Types in our language **)
-(*
-type typevar = Dict of typevar * typevar
-  | List of typevar
-  | TypeVariable of string
-*)
-   
+(** (should be semantically checked) types in our language **)
 
 type sassignment = 
   SAssign
 
 (** Variable / term indicator, with dots and indexing **)
-type svariable = SVar of string (*| SVarDot of svariable * svariable *) | SVarIndex of svariable * sexpr
+type svariable = variable (*| SVarDot of svariable * svariable | SVarIndex of svariable * sexpr *)
 and sexpr = typevar * sx
 and sx = 
   SBoolLit of bool
@@ -83,6 +77,7 @@ SIdentityAssign -> "="
   | SModAssign -> "%="
 
 let rec string_of_svar = function
+  | (t, var) -> "(" ^ string_of_typevar t ^ "," ^ string_of_var var ^ ")"
     SVar(v) -> v
     (* | SVarDot(v1, v2) -> string_of_svar v1 ^ "." ^ string_of_svar v2 *)
     | SVarIndex(v, e) -> string_of_svar v ^ "[" ^ string_of_sexpr e ^ "]"

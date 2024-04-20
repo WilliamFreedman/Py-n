@@ -1,14 +1,14 @@
 %{
 open Ast
 %}
-
+(* class interface tokens were removed *)
 %token NEWLINE PLUS MINUS TIMES DIVIDE DOT LPAREN RPAREN LBRACK RBRACK LCURL RCURL COMMA
 %token EXPONENT FLOORDIVIDE MOD LSHIFT RSHIFT BITAND BITOR BITXOR BITNOT WALRUS
 
 %token GT LT GEQ LEQ EQ NEQ ASSIGN PLUSASSIGN MINUSASSIGN TIMESASSIGN DIVIDEASSIGN MODASSIGN
 %token FLOORDIVASSIGN EXPASSIGN ANDASSIGN ORASSIGN XORASSIGN RSHIFTASSIGN LSHIFTASSIGN 
 
-%token DEDENT OR AND FLOAT BOOL STR INT VOID INDENT NONE FALSE TRUE CLASS INTERFACE FOR WHILE 
+%token DEDENT OR AND FLOAT BOOL STR INT VOID INDENT NONE FALSE TRUE FOR WHILE 
 %token FROM DEL NOT IS IN PASS CONTINUE BREAK ELIF ELSE IF RETURN DEF COLON ARROW LIST DICT IMPLEMENTS
 %token EOF
 
@@ -56,7 +56,7 @@ newline_list:
 block:
     declaration             { $1        }
     | assignment            { $1        }
-    | interface_definition  { $1        }
+    (*| interface_definition  { $1        }*)
     | while_loop            { $1        }
     | BREAK                 { Break     }
     | CONTINUE              { Continue  }
@@ -65,7 +65,7 @@ block:
     | function_block_call   { $1        }
     | return_exit           { $1        }
     | return_val            { $1        }
-    | class_definition      { $1        } 
+    (* | class_definition      { $1        } *)
     | conditional           { $1        }
     | for_loop              { $1        }
 	// | expr {$1} should this be allowed?
@@ -188,14 +188,15 @@ while_loop:
 
 for_loop:
 	FOR VARIABLE IN expr COLON NEWLINE INDENT block_list DEDENT   { For(Var($2), $4, $8)  }
-	
+(* 
 interface_definition:
 	INTERFACE VARIABLE COLON newline_list INDENT func_signature_list DEDENT     { InterfaceDefinition(Var($2), $6)  }
-
+*)
+(* 
 class_definition:
 	CLASS VARIABLE COLON newline_list INDENT block_list DEDENT                              { ClassDefinition(Var($2), $6)                  }
 	| CLASS VARIABLE IMPLEMENTS variable_list COLON newline_list INDENT block_list DEDENT   { ClassDefinitionImplements(Var($2), $4, $8)    }
-
+*)
 
 variable_list:
 	/* nothing */                   { []            }
