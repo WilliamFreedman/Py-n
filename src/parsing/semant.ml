@@ -330,7 +330,7 @@ and check_block allowed_block_set var_table func_table func_return_type = functi
     (var_table, func_table, SFuncBlockCall(func_name, sexpr_list))
   (* | FunctionSignature *)
   | FunctionDefinition(func_sig, block_list) -> 
-    let (variable, arg_list, typevar) = func_sig in
+    (* let (variable, arg_list, typevar) = func_sig in *)
     raise (Failure ("do this later"))
     (* let sfunc_sig = (check_expr var_table func_table variable, ) in *)
   | IfEnd(expr, block_list) -> 
