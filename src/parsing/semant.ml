@@ -26,7 +26,7 @@ and check_expr var_table func_table  = function
   | StringLit l -> (TypeVariable("string") , SStringLit l)
   (*| SVarExpr var -> (check the type of var, SVarExpr (convert var to svar type))*)
   | VarExpr var -> (match var with
-    | Var(v) -> (StringMap.find v var_table, SVarExpr(Var(v)))
+    | Var(v) -> (check_variable var_table (Var(v)), SVarExpr(Var(v)))
     (* | VarDot(v1, v2) -> let (v1_typevar, v1_sem) = check_expr v1 ar_table func_table  in
       let (_, var_table) = class_details (string_of_typevar v1_typevar)  in 
       let typ = StringMap.find v2 var_table
@@ -46,7 +46,7 @@ and check_expr var_table func_table  = function
     (match loop_type with
     | List (elem_type) -> (** Only doing lists **)
       let (expr_type, _) = check_expr (StringMap.add (string_of_var loop_var) elem_type var_table) func_table expr in
-      (List(expr_type), SListCompUnconditional(check_expr var_table func_table expr, (*check_variable var_table*) loop_var, check_expr var_table func_table loop_list))
+      (List(expr_type), SListCompUnconditional(check_expr var_table func_table expr, loop_var, check_expr var_table func_table loop_list))
     | _ -> raise (Failure ("List comprehension depends on non-list object")))
   | ListCompConditional(expr, loop_var, loop_list, condition) -> 
     (let (loop_type, _) = check_expr var_table  func_table loop_list in
@@ -62,15 +62,13 @@ and check_expr var_table func_table  = function
   | Walrus(var, e) -> 
     let lt = check_variable var_table var in
     let (rt, e') = check_expr var_table func_table e in
-    let err = "illegal assignment " ^ string_of_typevar lt ^ " = " ^
-              string_of_typevar rt ^ " in " ^ string_of_expr e
-    in
     if (lt = rt) then (lt, SWalrus(var, (rt, e')))
     else raise (Failure ("Type mismatch in walrus"))
-  | Binop(e1, op, e2) as e -> check_binop e1 op e2 var_table func_table
+  | Binop(e1, op, e2) -> check_binop e1 op e2 var_table func_table
   | FuncCall(fname, args) -> let (return_type, func_name, sexpr_list) = check_func_call var_table func_table fname args in
     (return_type, SFuncCall(func_name, sexpr_list))
   | List(l) -> check_list var_table func_table l
+  | _ -> raise (Failure ("Unsupported expr type (for now?)"))
   
 and
 
@@ -98,14 +96,21 @@ and
 and binop_return_type t1 op t2= 
   match op with
   | Add | Sub  ->
-    (match (t1,t2) with 
+    (match (t1, t2) with 
     | (TypeVariable("int"), TypeVariable("int")) -> TypeVariable("int")
     | (TypeVariable("float"), TypeVariable("float")) -> TypeVariable("float")
     | (TypeVariable("float"), TypeVariable("int")) -> TypeVariable("float")
     | (TypeVariable("int"), TypeVariable("float")) -> TypeVariable("float")
     | (_, _) -> raise (Failure "Invalid binop types"))
-  | Eq | Neq | Less ->
-    (match (t1,t2) with 
+  | Eq -> 
+    (match (t1, t2) with 
+    | (TypeVariable("bool"), TypeVariable("bool")) -> TypeVariable("bool")
+    | (TypeVariable("float"), TypeVariable("float")) -> TypeVariable("bool")
+    | (TypeVariable("float"), TypeVariable("int")) -> TypeVariable("bool")
+    | (TypeVariable("int"), TypeVariable("float")) -> TypeVariable("bool")
+    | (_, _) -> raise (Failure "Invalid binop types"))
+  | Neq | Less ->
+    (match (t1, t2) with 
     | (TypeVariable("int"), TypeVariable("int")) -> TypeVariable("bool")
     | (TypeVariable("float"), TypeVariable("float")) -> TypeVariable("bool")
     | (TypeVariable("float"), TypeVariable("int")) -> TypeVariable("bool")
@@ -168,36 +173,11 @@ and
     let lvalue_type = check_variable symbol_table lvalue in
     let binop_sexpr = check_binop (VarExpr(lvalue)) bop rvalue symbol_table func_table in 
     match binop_sexpr with 
-    | (t1,_) -> if (t1 != lvalue_type) then raise (Failure "Improperly typed assignment")
+    | (t1, _) -> if ( t1 <>  lvalue_type) then raise (Failure ("Improperly typed assignment, lvalue: " ^ string_of_typevar lvalue_type ^ ", rvalue: " ^ string_of_typevar t1))
      else 
         SBlockAssign(lvalue, SAssign, binop_sexpr)
 
-(* and check_list_comprehension comp symbol_table func_table  =
-  match comp with
-  | ListCompUnconditional(expr, loop_var, loop_list) ->
-      let (loop_list_type, loop_list_sexpr) = check_expr symbol_table func_table loop_list in
-      begin match loop_list_type with
-      | List(elem_type) ->
-          let extended_symbol_table = StringMap.add (string_of_var loop_var) elem_type symbol_table in
-          let (elem_sexpr_type, elem_sexpr) = check_expr extended_symbol_table func_table expr in 
-          (List(elem_sexpr_type), SListCompUnconditional(elem_sexpr, loop_var, loop_list_sexpr))
-      | _ -> raise (Failure "List comprehension requires a list type for iteration")
-      end
-  | ListCompConditional(expr, loop_var, loop_list, condition) ->
-      (* Similar to unconditional, but with a condition that must be a boolean *)
-      let (loop_list_type, loop_list_sexpr) = check_expr symbol_table func_table loop_list in
-      begin match loop_list_type with
-      | ListType elem_type ->
-          let extended_symbol_table = StringMap.add loop_var elem_type symbol_table in
-          let (elem_sexpr_type, elem_sexpr) = check_expr extended_symbol_table func_table expr in
-          let (cond_type, cond_sexpr) = check_expr extended_symbol_table func_table condition in
-          if cond_type != BoolType then raise (Failure "Condition in list comprehension must be a boolean")
-          else
-          (ListType elem_sexpr_type, SListCompConditional (elem_sexpr, loop_var, loop_list_sexpr, cond_sexpr))
-      | _ -> raise (Failure "List comprehension requires a list type for iteration")
-      end
-  | _ -> raise (Failure "Invalid expression type for list comprehension")
-*)
+
 and
 
 check_func_types func_table func_name = 
@@ -212,7 +192,7 @@ arg_list_helper symbol_table func_table params arg_types =
   | ((phead :: ptail), (thead :: ttail)) -> 
     ( let phead_sexpr = check_expr symbol_table func_table phead in
       match phead_sexpr with 
-      | (t, _) -> if t != thead then raise (Failure "Improperly typed parameter")
+      | (t, _) -> if (string_of_typevar t) <> (string_of_typevar thead) then raise (Failure ("Improperly typed parameter, should be: " ^ string_of_typevar t ^ " got: " ^ string_of_typevar thead))
       else (phead_sexpr :: arg_list_helper symbol_table func_table ptail ttail))
   | (_, _) -> raise (Failure "Wrong number of arguments")
 
@@ -231,7 +211,9 @@ variable_declaration_helper symbol_table func_table var vartype =
   if StringMap.mem (string_of_var var) func_table
     then raise (Failure ("Variable " ^ string_of_var var  ^ " already declared as function"))
   else
-    StringMap.add (string_of_var var) vartype symbol_table and
+    StringMap.add (string_of_var var) vartype symbol_table 
+    
+and
     
 arg_to_type (arg_types: (variable * typevar)) =
   let (_,t) = arg_types in
@@ -239,14 +221,14 @@ arg_to_type (arg_types: (variable * typevar)) =
 
 
 
-function_declaration_helper symbol_table func_table func_name return_type arg_types =
+function_declaration_helper symbol_table func_table func_name return_type args =
   if StringMap.mem (string_of_var func_name) func_table
   then raise (Failure ("Function " ^ (string_of_var func_name)  ^ " already declared"))
   else 
   if StringMap.mem (string_of_var func_name) symbol_table
     then raise (Failure ("Function " ^ (string_of_var func_name)  ^ " already declared as function"))
   else
-    StringMap.add (string_of_var func_name) (return_type, List.map arg_to_type arg_types) func_table
+    StringMap.add (string_of_var func_name) (return_type, List.map arg_to_type args) func_table
 
 (* check_block takes the following args: *)
 
@@ -264,7 +246,11 @@ check_block_list allowed_block_set var_table func_table func_return_type = funct
   | x :: xs -> let (v_t, f_t, sblock) = check_block allowed_block_set var_table func_table func_return_type x in sblock :: check_block_list StringSet.empty v_t f_t None xs
 
 (* It returns a tuple of the var_table * func_table * Sast block *)
-
+and add_func_params_to_var_table var_table func_table arg_list = (match arg_list with
+  | [] -> var_table
+  | x :: xs -> let (var_name, typ) = x in let new_var_table = (variable_declaration_helper var_table func_table var_name typ) in add_func_params_to_var_table new_var_table func_table xs)
+  
+  
 and check_block allowed_block_set var_table func_table func_return_type = function
   BlockAssign(v, s, e) -> (var_table, func_table, check_assign var_table func_table v s e)
   | Break -> 
@@ -293,15 +279,18 @@ and check_block allowed_block_set var_table func_table func_return_type = functi
   | ReturnVoid -> 
     if (func_return_type = None) then raise (Failure ("Return must be specified within a function.")) else
     (match StringSet.find_opt "ReturnVoid" allowed_block_set with
-    | None -> raise (Failure ("Return must be specified within a function."))
+    | None -> raise (Failure ("Return statement not in a function."))
     | Some _ -> 
       if func_return_type = Some(TypeVariable("void")) then (var_table, func_table, SReturnVoid)
       else raise (Failure ("Expected no return expression in a void function")))
   | VarDec(typ, var, expr) -> 
-    let new_map = variable_declaration_helper var_table func_table var typ in
+    let (t, e) = check_expr var_table func_table expr in
+    if t = typ then (
+    let new_var_table = variable_declaration_helper var_table func_table var typ in
     let rvalue_sexpr = check_expr var_table func_table expr in
     let var_dec_to_return = SVarDec(typ, var, rvalue_sexpr) in 
-    (var_table, func_table, var_dec_to_return)
+    (new_var_table, func_table, var_dec_to_return)
+    ) else raise (Failure ("Type mismatch, LHS: " ^ string_of_typevar typ ^ " RHS: " ^ string_of_typevar t))
 
   | While(loop_expr, loop_block_list) -> 
     (* Make sure the expression is a bool type, 
@@ -328,33 +317,44 @@ and check_block allowed_block_set var_table func_table func_return_type = functi
   | FuncBlockCall(fname, args) -> 
     let (_, func_name, sexpr_list) = check_func_call var_table func_table fname args in
     (var_table, func_table, SFuncBlockCall(func_name, sexpr_list))
-  (* | FunctionSignature *)
+  (* | FunctionSignature *) 
   | FunctionDefinition(func_sig, block_list) -> 
-    (* let (variable, arg_list, typevar) = func_sig in *)
-    raise (Failure ("do this later"))
-    (* let sfunc_sig = (check_expr var_table func_table variable, ) in *)
+    let (variable, arg_list, return_type) = func_sig in
+    let new_func_table = function_declaration_helper var_table func_table variable return_type arg_list in
+    let new_var_table = add_func_params_to_var_table var_table func_table arg_list in 
+    let new_allowed_block_set = 
+      StringSet.add "Pass" (if return_type = TypeVariable("void") then StringSet.add "ReturnVoid" allowed_block_set
+      else StringSet.add "ReturnVal" allowed_block_set) in
+    let sblock_list = check_block_list new_allowed_block_set new_var_table new_func_table (Some(return_type)) block_list in
+    (var_table, new_func_table, SFunctionDefinition(func_sig, sblock_list))
+    
   | IfEnd(expr, block_list) -> 
     let sexpr = check_expr var_table func_table expr in
     let sblock_list = check_block_list allowed_block_set var_table func_table func_return_type block_list in
     (var_table, func_table,  SIfEnd(sexpr, sblock_list))
+
   | IfNonEnd(expr, block_list, block) ->
     let sexpr = check_expr var_table func_table expr in
     let sblock_list = check_block_list allowed_block_set var_table func_table func_return_type block_list in
     let (_, _, sblock) = check_block allowed_block_set var_table func_table func_return_type block in
     (var_table, func_table, SIfNonEnd(sexpr, sblock_list, sblock))
+
   | ElifEnd(expr, block_list) -> 
     let sexpr = check_expr var_table func_table expr in
     let sblock_list = check_block_list allowed_block_set var_table func_table func_return_type block_list in
     (var_table, func_table, SElifEnd(sexpr, sblock_list))
+
   | ElifNonEnd(expr, block_list, block) ->
     let sexpr = check_expr var_table func_table expr in
     let sblock_list = check_block_list allowed_block_set var_table func_table func_return_type block_list in
     let (_, _, sblock) = check_block allowed_block_set var_table func_table func_return_type block in
     (var_table, func_table, SElifNonEnd(sexpr, sblock_list, sblock))
+
   | ElseEnd(block_list) ->
     let sblock_list = check_block_list allowed_block_set var_table func_table func_return_type block_list in
     (var_table, func_table, SElseEnd(sblock_list))
-  (* | _ as c -> raise (Failure ("Unsupported block type " ^ string_of_sblock c)) *)
+
+  | _ -> raise (Failure ("Unsupported block type"))
 (*| InterfaceDefinition
 | ClassDefinition
 | ClassDefinitionImplements *)
