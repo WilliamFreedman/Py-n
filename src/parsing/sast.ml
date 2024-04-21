@@ -61,7 +61,7 @@ type sprogram = {
 }
 
 (* Pretty-printing functions *)
-let string_of_sspecial_assignment = function
+(* let string_of_sspecial_assignment = function
 SIdentityAssign -> "="
   | SPlusAssign -> "+="
   | SMinusAssign -> "-=" 
@@ -74,13 +74,13 @@ SIdentityAssign -> "="
   | SXorAssign -> "^=" 
   | SRShiftAssign -> ">>="
   | SLShiftAssign -> "<<="
-  | SModAssign -> "%="
+  | SModAssign -> "%=" *)
 
-let rec string_of_svar = function
-  | (t, var) -> "(" ^ string_of_typevar t ^ "," ^ string_of_var var ^ ")"
+let rec string_of_svar = string_of_var
+  (* | (t, var) -> "(" ^ string_of_typevar t ^ "," ^ string_of_var var ^ ")"
     SVar(v) -> v
     (* | SVarDot(v1, v2) -> string_of_svar v1 ^ "." ^ string_of_svar v2 *)
-    | SVarIndex(v, e) -> string_of_svar v ^ "[" ^ string_of_sexpr e ^ "]"
+    | SVarIndex(v, e) -> string_of_svar v ^ "[" ^ string_of_sexpr e ^ "]" *)
 and string_of_sexpr (t, e) =
   "(" ^ string_of_typevar t ^ " : " ^ (match e with
     SIntLit(l) -> string_of_int l
@@ -117,7 +117,7 @@ let string_of_sfunc_sig = function
     
 let rec string_of_sblock = function
   SBlockAssign(v, spec_assign, expr) -> 
-    string_of_svar v ^ " " ^ string_of_sspecial_assignment spec_assign ^ " " ^ string_of_sexpr expr ^ "\n"
+    string_of_svar v ^ " = " ^ " " ^ string_of_sexpr expr ^ "\n"
   | SVarDec(t, v, expr) ->
     string_of_svar v ^ ": " ^ string_of_typevar t ^ " = " ^ string_of_sexpr expr ^ "\n"
   | SWhile(e, block_list) ->
@@ -140,9 +140,9 @@ let rec string_of_sblock = function
   | SClassDefinitionImplements(v, interfaces, block_list) ->
     "class " ^ string_of_svar v ^ " implements " ^ String.concat ", " (List.map string_of_svar interfaces) ^ ":\n" ^  String.concat "\n" (List.map string_of_sblock block_list) ^ "\n"
   | SIfEnd(e, bl) -> "if " ^ string_of_sexpr e ^ ":\n" ^ String.concat "\n" (List.map string_of_sblock bl) ^ "\n"
-  | SIfNonEnd(e, bl, nbl) -> "if " ^ string_of_sexpr e ^ ":\n" ^ String.concat "\n" (List.map string_of_sblock bl) ^ string_of_block nbl
+  | SIfNonEnd(e, bl, nbl) -> "if " ^ string_of_sexpr e ^ ":\n" ^ String.concat "\n" (List.map string_of_sblock bl) ^ string_of_sblock nbl
   | SElifEnd(e, bl) -> "elif " ^ string_of_sexpr e ^ ":\n" ^ String.concat "\n" (List.map string_of_sblock bl) ^ "\n"
-  | SElifNonEnd(e, bl, nbl) -> "elif " ^ string_of_sexpr e ^ ":\n" ^ String.concat "\n" (List.map string_of_sblock bl) ^ string_of_block nbl
+  | SElifNonEnd(e, bl, nbl) -> "elif " ^ string_of_sexpr e ^ ":\n" ^ String.concat "\n" (List.map string_of_sblock bl) ^ string_of_sblock nbl
   | SElseEnd(bl) -> "else:\n" ^ String.concat "\n" (List.map string_of_sblock bl) ^ "\n"
 
 let string_of_sprogram fdecl =
