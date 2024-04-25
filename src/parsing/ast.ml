@@ -31,16 +31,16 @@ and expr =
   | List of expr list
   | ListCompUnconditional of expr * variable * expr
   | ListCompConditional of expr * variable * expr * expr
-  | DictCompConditional of expr * expr * variable * variable * expr * expr (*todo*)
-  | DictCompUnconditional of expr * expr * variable * variable * expr (*todo*)
+  | DictCompConditional of expr * expr * variable * variable * expr * expr
+  | DictCompUnconditional of expr * expr * variable * variable * expr
   | Dict of (expr * expr) list (*todo*)
   | Binop of expr * bop * expr
   | Walrus of variable * expr
   | FuncCall of variable * expr list
-  (** | IndexingVar of variable * expr **)
+  | IndexingVar of variable * expr
   | IndexingStringLit of string * expr (*todo*)
   | IndexingExprList of expr * expr (*todo*)
-  (** | Return of expr **)
+  | Return of expr
 
 (*{DictCompUnconditional($2, $4, Var(6), Var($8), $10, 12$)}*)
 type arg = variable * typevar
@@ -140,7 +140,6 @@ and string_of_expr = function
   | IndexingExprList(e1, e2) -> string_of_expr e1 ^ "[" ^ string_of_expr e2 ^ "]"
   | DictCompConditional(e1,e2,v1,v2,e3,e4) -> "{" ^ string_of_expr e1 ^ " : " ^ string_of_expr e2 ^ " for (" ^ string_of_var v1 ^ ", " ^ string_of_var v2 ^ ") in " ^ string_of_expr e3 ^ "if" ^ string_of_expr e4 ^ "}" 
   | DictCompUnconditional(e1,e2,v1,v2,e3) -> "{" ^ string_of_expr e1 ^ " : " ^ string_of_expr e2 ^ " for (" ^ string_of_var v1 ^ ", " ^ string_of_var v2 ^ ") in " ^ string_of_expr e3 ^ "}" 
-
   (* | _ -> raise (Failure "Invalid expr") *)
 
 
