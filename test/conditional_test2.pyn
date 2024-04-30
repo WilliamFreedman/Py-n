@@ -1,0 +1,5 @@
+x: int = 3
+if False:
+INDENT x += 4
+DEDENT 
+y: int = x

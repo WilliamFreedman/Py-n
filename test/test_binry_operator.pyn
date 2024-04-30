@@ -1,0 +1,15 @@
+# And logic table
+print(True && True)
+print(False && True)
+print(True && False)
+print(False && False)
+# Or logic table
+print(True || True)
+print(False || True)
+print(True ||False)
+print(False || False)
+# Xor logic table
+print(True ^ True)
+print(False ^ True)
+print(True ^ False)
+print(False ^ False)

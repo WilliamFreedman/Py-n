@@ -1,4 +1,4 @@
-type bop = Iden | Add | Sub | Mult | Div | FDiv |  Eq | Exp | Neq | Less | And | Or | Xor | BitAnd | BitOr | LShift | RShift | Mod | BitXor (*| ArrayGet | Dot *)
+type bop = Iden | Add | Sub | Mult | Div | FDiv | Eq | Exp | Neq | Less | And | Or | Xor | BitAnd | BitOr | LShift | RShift | Mod | BitXor | Geq | Leq (*| ArrayGet | Dot *)
 
 (** Types in our language **)
 type typevar = Dict of typevar * typevar
@@ -98,6 +98,8 @@ let string_of_op = function
   | BitAnd -> "&"
   | BitOr -> "|"
   | BitXor -> "^"
+  | Geq -> ">="
+  | Leq -> "<="
 
 let string_of_special_assignment = function
 IdentityAssign -> "="

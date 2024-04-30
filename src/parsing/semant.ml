@@ -41,6 +41,15 @@ and check_expr var_table func_table  = function
         if typvar = TypeVariable("int") then (list_type, SVarExpr(var))
         else raise (Failure ("Invalid indexing: " ^ string_of_var (VarIndex(v1, e)))))
       | _ -> raise (Failure ("Indexing not supported for this variable"))))
+    | Dict(dict_elems) -> 
+    
+    (match dict_elems with
+    | [] -> raise (Failure "Empty dictionaries not allowed")
+    | (k, v) :: _ ->
+      let (key_type, _) = check_expr var_table func_table k in
+      let (value_type, _) = check_expr var_table func_table v in
+      let sdict_elems = check_dict var_table func_table dict_elems key_type value_type in
+      (Dict(key_type, value_type), SDict(sdict_elems)))
   | ListCompUnconditional(expr, loop_var, loop_list) -> 
     let (loop_type, _) = check_expr var_table func_table loop_list in 
     (match loop_type with
@@ -58,6 +67,32 @@ and check_expr var_table func_table  = function
       else
       (List(expr_type), SListCompConditional(check_expr var_table func_table expr, loop_var, check_expr var_table func_table loop_list, check_expr var_table func_table condition)))
     | _ -> raise (Failure ("List comprehension depends on non-list object")))
+  | DictCompUnconditional(key_expr, value_expr, key_var, value_var, dict_expr) ->
+    let (key_type, key_sx) = check_expr var_table func_table key_expr in
+    let (value_type, value_sx) = check_expr var_table func_table value_expr in
+    let updated_var_table = StringMap.add (string_of_var key_var) key_type var_table in
+    let updated_var_table = StringMap.add (string_of_var value_var) value_type updated_var_table in
+    let (dict_expr_type, dict_sexpr_sx) = check_expr updated_var_table func_table dict_expr in
+    let dict_sexpr = (dict_expr_type, dict_sexpr_sx) in
+    (Dict(key_type, value_type), SDictCompUnconditional((key_type, key_sx), (value_type, value_sx), key_var, value_var, dict_sexpr))
+
+  | DictCompConditional(key_expr, value_expr, key_var, value_var, dict_expr, condition) ->
+    let (key_type, key_sx) = check_expr var_table func_table key_expr in
+    let (value_type, value_sx) = check_expr var_table func_table value_expr in
+    let updated_var_table = StringMap.add (string_of_var key_var) key_type var_table in
+    let updated_var_table = StringMap.add (string_of_var value_var) value_type updated_var_table in
+    let (dict_expr_type, dict_sexpr_sx) = check_expr updated_var_table func_table dict_expr in
+    let (condition_type, condition_sexpr_sx) = check_expr updated_var_table func_table condition in
+    if condition_type != TypeVariable("bool") then
+        raise (Failure "Dictionary comprehension condition must be of type bool");
+    
+    let key_sexpr = (key_type, key_sx) in
+    let value_sexpr = (value_type, value_sx) in
+    let dict_sexpr = (dict_expr_type, dict_sexpr_sx) in
+    let condition_sexpr = (condition_type, condition_sexpr_sx) in
+    (Dict(key_type, value_type), SDictCompConditional(key_sexpr, value_sexpr, key_var, value_var, dict_sexpr, condition_sexpr))
+  
+  
   (*| Id var -> (type_of_identifier var, SId var)*) (*todo*)
   | Walrus(var, e) -> 
     let lt = check_variable var_table var in
@@ -92,6 +127,18 @@ and
       let head_sexpr = check_expr symbol_table func_table head in
         match head_sexpr with
         (t, _) -> (List(t), SList(list_to_sexpr list_elems symbol_table func_table t))
+and check_dict var_table func_table dict_elems key_type value_type =
+  List.fold_left (fun acc (k, v) ->
+    let (k_type, k_sexpr) = check_expr var_table func_table k in
+    let (v_type, v_sexpr) = check_expr var_table func_table v in
+    if k_type != key_type then
+      raise (Failure ("Key type mismatch. Expected " ^ string_of_typevar key_type ^ ", found " ^ string_of_typevar k_type))
+    else if v_type != value_type then
+      raise (Failure ("Value type mismatch. Expected " ^ string_of_typevar value_type ^ ", found " ^ string_of_typevar v_type))
+    else acc @ [((k_type, k_sexpr), (v_type, v_sexpr))]
+  ) [] dict_elems
+        
+
 
 and binop_return_type t1 op t2= 
   match op with
@@ -117,7 +164,7 @@ and binop_return_type t1 op t2=
     | (TypeVariable("int"), TypeVariable("float")) -> TypeVariable("bool")
     | (_, _) -> raise (Failure "Invalid binop types"))
   | Mod | LShift | RShift -> 
-    (match (t1,t2) with
+    (match (t1, t2) with
     | (TypeVariable("int"), TypeVariable("int")) -> TypeVariable("int")
     | (TypeVariable("float"), TypeVariable("int")) -> TypeVariable("float")
     | (_, _) -> raise (Failure "Invalid binop types"))
@@ -126,7 +173,7 @@ and binop_return_type t1 op t2=
     | (TypeVariable("bool"), TypeVariable("bool")) -> TypeVariable("bool")
     | (_, _) -> raise (Failure "Invalid binop types"))
   | BitAnd | BitOr | BitXor-> 
-   ( match (t1,t2) with
+   ( match (t1, t2) with
     | (TypeVariable("int"), TypeVariable("int")) -> TypeVariable("int")
     | (TypeVariable("float"), TypeVariable("float")) -> TypeVariable("float")
     | (_,_) -> raise (Failure "Invalid binop types"))

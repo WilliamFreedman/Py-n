@@ -1,0 +1,2 @@
+s:str = "ocaml"
+print(s[7]) # index out of range

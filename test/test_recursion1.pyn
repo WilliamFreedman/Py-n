@@ -1,0 +1,7 @@
+def rec(int n):
+    if n <= 3:
+        return n
+    else:
+        return rec(n-1) + rec(n-2)
+x: int = 3
+print(rec(3))

@@ -1,0 +1,10 @@
+x:int = 4
+y:int = 5
+def binary_ops(x:int,y:int):
+    print(x + y)
+    print(x - y)
+    print(x * y)
+    print(x / y)
+    print(x // y)
+    print(x ** y)
+    print(x % y)
