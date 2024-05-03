@@ -177,9 +177,14 @@ and binop_return_type t1 op t2=
     | (TypeVariable("int"), TypeVariable("int")) -> TypeVariable("int")
     | (TypeVariable("float"), TypeVariable("float")) -> TypeVariable("float")
     | (_,_) -> raise (Failure "Invalid binop types"))
-  | Iden | Mult | Div | FDiv | Exp ->
+  | Iden | Mult | Div | FDiv ->
     ( match (t1, t2) with
     | (t1, t2) when t1 = t2 -> t1    
+    | (_, _) -> raise (Failure "Invalid binop types"))
+  | Exp -> 
+    ( match (t1, t2) with
+    | (TypeVariable("int"), TypeVariable("int")) -> TypeVariable("int")
+    | (TypeVariable("float"), TypeVariable("int")) -> TypeVariable("float")   
     | (_, _) -> raise (Failure "Invalid binop types"))
   (* | _ -> raise (Failure "Unknown binop found") *)
  
