@@ -1,7 +1,7 @@
 %{
 open Ast
 %}
-(* class interface tokens were removed *)
+
 %token NEWLINE PLUS MINUS TIMES DIVIDE DOT LPAREN RPAREN LBRACK RBRACK LCURL RCURL COMMA
 %token EXPONENT FLOORDIVIDE MOD LSHIFT RSHIFT BITAND BITOR BITXOR BITNOT WALRUS
 
@@ -22,7 +22,6 @@ open Ast
 %start program_rule
 %type <Ast.program> program_rule
 
-(* https://www.geeksforgeeks.org/precedence-and-associativity-of-operators-in-python/ *)
 %right ASSIGN PLUSASSIGN MINUSASSIGN TIMESASSIGN DIVIDEASSIGN FLOORDIVASSIGN EXPASSIGN ANDASSIGN ORASSIGN XORASSIGN RSHIFTASSIGN LSHIFTASSIGN MODASSIGN 
 %right IF ELIF ELSE
 %right WALRUS
@@ -56,7 +55,6 @@ newline_list:
 block:
     declaration             { $1        }
     | assignment            { $1        }
-    (*| interface_definition  { $1        }*)
     | while_loop            { $1        }
     | BREAK                 { Break     }
     | CONTINUE              { Continue  }
@@ -65,7 +63,6 @@ block:
     | function_block_call   { $1        }
     | return_exit           { $1        }
     | return_val            { $1        }
-    (* | class_definition      { $1        } *)
     | conditional           { $1        }
     | for_loop              { $1        }
 	// | expr {$1} should this be allowed?
@@ -78,7 +75,6 @@ return_val:
 
 declaration:
     VARIABLE COLON typename ASSIGN expr { VarDec($3, Var($1), $5) } 
-    (*| VARIABLE COLON VARIABLE { VarDec(TypeVariable($3), Var($1)) }*)
 
 typename:
     INT	                                            { TypeVariable("int")   }
@@ -90,10 +86,8 @@ typename:
     | LIST LBRACK typename RBRACK                   { List($3)              }
     | DICT LBRACK typename COMMA typename RBRACK    { Dict($3, $5)          }
 
-(** VARIABLE: Just a string, variable: string.string string[blah blah] **)
 variable:
     VARIABLE                        { Var($1)           }
-    // | variable DOT variable         { VarDot($1, $3)    }
     | variable LBRACK expr RBRACK   { VarIndex($1, $3)  }
 
 assignment:
@@ -121,8 +115,6 @@ expr:
     | dict                          { $1                            }
     | STRINGLIT LBRACK expr RBRACK  { IndexingStringLit($1, $3) 	}
     | list LBRACK expr RBRACK       { IndexingExprList($1, $3) 		}
-    (** variable should eat this up | VARIABLE LBRACK expr RBRACK   { IndexingVar(Var($1), $3) 		} **)
-    (** | expr DOT expr                 { Binop($1, Dot, $3)    } **)
     | expr PLUS expr                { Binop($1, Add, $3)            }
     | expr MINUS expr               { Binop($1, Sub, $3)            }
     | expr EQ expr                  { Binop($1, Eq, $3)             }
@@ -188,15 +180,6 @@ while_loop:
 
 for_loop:
 	FOR VARIABLE IN expr COLON NEWLINE INDENT block_list DEDENT   { For(Var($2), $4, $8)  }
-(* 
-interface_definition:
-	INTERFACE VARIABLE COLON newline_list INDENT func_signature_list DEDENT     { InterfaceDefinition(Var($2), $6)  }
-*)
-(* 
-class_definition:
-	CLASS VARIABLE COLON newline_list INDENT block_list DEDENT                              { ClassDefinition(Var($2), $6)                  }
-	| CLASS VARIABLE IMPLEMENTS variable_list COLON newline_list INDENT block_list DEDENT   { ClassDefinitionImplements(Var($2), $4, $8)    }
-*)
 
 variable_list:
 	/* nothing */                   { []            }

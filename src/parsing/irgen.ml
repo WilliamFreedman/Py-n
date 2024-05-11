@@ -15,31 +15,37 @@ let translate (block_list) =
   and char_t = L.i8_type context in
   
   let char_pt = L.pointer_type char_t in
-
+  
+  let printf_t : L.lltype =
+    L.var_arg_function_type int_t [| L.pointer_type char_t |] 
+  in 
+  let printf_func : L.llvalue =
+    L.declare_function "printf" printf_t the_module in
   let rec ltype_of_typ = function
     A.TypeVariable("int") -> int_t
     | A.TypeVariable("bool")  -> bool_t
     | A.TypeVariable("float") -> float_t
     | A.TypeVariable("string") -> char_pt
+    | _ -> raise (Failure (" Not implemented yet"))
 
   and
 
   (* Assigns an expression (rvalue's) llvalue to the variable's llvalue (w/ name var_name) *)
   (* Returns a builder! *)
-  variable_assignment_helper var_map var_name rvalue builder =
+  variable_assignment_helper var_map func_map var_name rvalue builder =
     let var_llvalue = StringMap.find var_name var_map in
-    let rvalue_llvalue = build_expr rvalue var_map builder in
-    ignore(L.build_store var_llvalue rvalue_llvalue); builder
+    let rvalue_llvalue = build_expr var_map func_map builder rvalue in
+    ignore(L.build_store var_llvalue rvalue_llvalue builder); builder
 
   and
 
   (* Declares a variable on the stack using alloca *)
   (* Also evaluates the assigned expression using var_assignment_helper *)
   (* Updates and returns the var_map with the new var_name -> llvalue mapping *)
-  variable_declaration_helper var_map var_type var_name rvalue builder =
+  variable_declaration_helper var_map func_map var_type var_name rvalue builder =
     let var_llvalue = L.build_alloca (ltype_of_typ var_type) var_name builder in
     let new_var_map = StringMap.add var_name var_llvalue var_map in
-    ignore(variable_assignment_helper new_var_map var_name rvalue builder); new_var_map
+    ignore(variable_assignment_helper new_var_map func_map var_name rvalue builder); new_var_map
 
   and
   
@@ -148,26 +154,18 @@ let translate (block_list) =
     match L.block_terminator (L.insertion_block builder) with
       Some _ -> ()
     | None -> ignore (instr builder) 
-
-  and 
-  
-  printf_t : L.lltype =
-    L.var_arg_function_type int_t [| L.pointer_type char_t |] 
-  and
-  printf_func : L.llvalue =
-    L.declare_function "printf" printf_t the_module
   
   and
 
-  build_expr var_map builder ((_, e) : sexpr) = match e with
+  build_expr var_map func_map builder ((_, e) : sexpr) = match e with
       SIntLit i -> L.const_int int_t i
     | SBoolLit b -> L.const_int bool_t (if b then 1 else 0)
     | SFloatLit f -> L.const_float float_t f
     (* | SStringLit s -> TODO *)
-    | SVarExpr(Var(v)) -> L.build_load (StringMap.find (string_of_var v) var_map) (string_of_var v) builder
+    | SVarExpr(Var(v)) -> L.build_load (StringMap.find v var_map) v builder
     | SBinop (e1, op, e2) ->
-        let e1' = build_expr var_map builder e1
-        and e2' = build_expr var_map builder e2 in
+        let e1' = build_expr var_map func_map builder e1
+        and e2' = build_expr var_map func_map builder e2 in
         (match op with
            A.Add     -> L.build_add
          | A.Sub     -> L.build_sub
@@ -196,37 +194,37 @@ let translate (block_list) =
         ) e1' e2' "tmp" builder
     (* | SList l -> todo *)
     (* | SDict d ->  todo *)
-    (* | SListCompUnconditional lc -> 
+    (* | SListCompUnconditional lc ->  
     | SListCompConditional lc -> 
     | SDictCompUnconditional dc -> 
     | SDictCompConditional dc ->  *)
-    | SWalrus
-    | SFuncCall ("print", expr) ->
-      L.build_call printf_func [| (L.build_global_stringptr "%d\n" "fmt" builder) ; (build_expr builder e) |]
-      "printf" builder
+    | SWalrus(var, expr) -> raise (Failure (" Not implemented yet"))
+    | SFuncCall (Var("print"), expr) -> raise (Failure (" Not implemented yet"))
+      (*L.build_call printf_func [| (L.build_global_stringptr "%d\n" "fmt" builder) ; (build_expr builder e) |]
+      "printf" builder*)
     | SFuncCall (var, expr) -> 
       (* let (fdef, fast) = StringMap.find *)
       raise (Failure (" Not implemented yet"))
     (* | SIndexingExprList *)
-    | SIndexingStringLit -> raise (Failure (" Not implemented yet"))
+    | SIndexingStringLit(e1, e2) -> raise (Failure (" Not implemented yet"))
     and 
 
   (* Takes in a var_map, func_map, builder, and block and returns new var_map, func_map builder *)
   (* var_map is a mapping from variable names (strings) to their corresponding llvalues *)
   (* func_map is a mapping from function names (strings) to their corresponding llvalues *)
   build_block var_map func_map builder cur_function = function
-    SBlockAssign(var_name, s_assign, s_expr) ->
+    SBlockAssign(Var(var_name), s_assign, s_expr) ->
       (* Evaluate the expression and store it in the variable *)
-      (var_map, func_map, (variable_assignment_helper var_map var_name s_expr builder))
+      (var_map, func_map, (variable_assignment_helper var_map func_map var_name s_expr builder))
 
     | SBreak -> raise (Failure (" Not implemented yet"))
     | SContinue -> raise (Failure (" Not implemented yet"))
     | SPass -> raise (Failure (" Not implemented yet"))
 
-    | SVarDec (typ, var_name, s_exp) -> 
+    | SVarDec (typ, Var(var_name), s_expr) -> 
       (* Declare the variable, evaluate the expression and store it in the variable *)
       (* define_global is never used, at least for now *) 
-      let new_var_map = variable_declaration_helper var_map typ var_name s_expr builder in
+      let new_var_map = variable_declaration_helper var_map func_map typ var_name s_expr builder in
       (new_var_map, func_map, builder)
 
     | SReturnVal(sexpr) -> raise (Failure (" Not implemented yet"))
@@ -239,19 +237,19 @@ let translate (block_list) =
     (* | SInterfaceDefinition of svariable * sfunction_signature list -> *)
     (* | SClassDefinition of svariable * sblock list -> *)
     (* | SClassDefinitionImplements of svariable * svariable list * sblock list -> *)
-    | SIfEnd(condition, block_list) | SElifEnd(condition, block_list)->
-      let bool_val = build_expr builder condition in
+    (* | SIfEnd(condition, block_list) | SElifEnd(condition, block_list)->
+      let bool_val = build_expr var_map func_map builder condition in
       let then_bb = L.append_block context "then" cur_function in
-      ignore (build_block_list var_map func_map (L.builder_at_end context then_bb) cur_function block_list);
+      let (new_var_map, new_func_map, _) = (build_block_list var_map func_map (L.builder_at_end context then_bb) cur_function block_list) in
 
       let end_bb = L.append_block context "if_end" cur_function in
       let build_br_end = L.build_br end_bb in (* partial function *)
       add_terminal (L.builder_at_end context then_bb) build_br_end;
       
       ignore(L.build_cond_br bool_val then_bb end_bb builder);
-      L.builder_at_end context end_bb
+      (new_var_map, new_func_map, L.builder_at_end context end_bb)
     | SIfNonEnd(condition, block_list, else_block) | SElifNonEnd(condition, block_list, else_block) ->
-      let bool_val = build_expr builder condition in
+      let bool_val = build_expr var_map func_map builder condition in
       let then_bb = L.append_block context "then" cur_function in
       ignore (build_block_list var_map func_map (L.builder_at_end context then_bb) cur_function block_list);
       let else_bb = L.append_block context "else" cur_function in
@@ -259,8 +257,8 @@ let translate (block_list) =
 
       let end_bb = L.append_block context "if_end" cur_function in
       let build_br_end = L.build_br end_bb in (* partial function *)
-      add_terminal (L.builder_at_end context then_bb) build_br_end;
-      add_terminal (L.builder_at_end context else_bb) build_br_end;
+      ignore (add_terminal (L.builder_at_end context then_bb) build_br_end);
+      (add_terminal (L.builder_at_end context else_bb) build_br_end);
             
       (* (match else_block with 
       | SElifNonEnd -> build_block var_map func_map builder cur_function else_block
@@ -268,18 +266,18 @@ let translate (block_list) =
       | SElseEnd -> ) *)
     | SElseEnd(block_list) ->
       let then_bb = L.append_block context "then" cur_function in
-      ignore (build_block_list var_map func_map (L.builder_at_end context then_bb) cur_function block_list);
+      ignore (build_block_list var_map func_map (L.builder_at_end context then_bb) cur_function block_list); *)
   and
 
       
 
-  build_block_list var_table func_table builder = function 
+  build_block_list var_table func_table builder cur_function = function 
     | [] -> []
-    | x :: xs -> let (new_var_table, new_func_table, new_builder) = build_block var_table builder x in build_block_list new_var_table new_func_table new_builder xs
+    | x :: xs -> let (new_var_table, new_func_table, new_builder) = build_block var_table func_table builder cur_function x in build_block_list new_var_table new_func_table new_builder cur_function xs
     in 
   
   (* Create a "main" function that all code will be inside *)
-  let prog_func = L.define_function "program_entry" (L.function_type (void_type context) [||]) the_module in
-  let builder = L.builder_at_end context entry prog_func in
-  build_block_list StringMap.empty StringMap.empty builder block_list;
+  let prog_func = L.define_function "program_entry" (L.function_type (L.void_type context) [||]) the_module in
+  let builder = L.builder_at_end context (L.entry_block prog_func) in
+  build_block_list StringMap.empty StringMap.empty builder None block_list;
   the_module

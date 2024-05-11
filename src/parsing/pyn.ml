@@ -21,8 +21,9 @@
      let ast = Parser.program_rule Scanner.tokenize lexbuf in
      match !action with
        Ast -> print_string (Ast.string_of_program ast)
-     | _ -> let sast = Semant.check ast in
+     | _ -> let sblock_list = Semant.check ast.body
+        in let sprog = { Sast.body = sblock_list } in
        match !action with
          Ast     -> ()
-       | Sast    -> print_string (Sast.string_of_sprogram sast)
-       | LLVM_IR -> print_string (Llvm.string_of_llmodule (Irgen.translate sast))
+       | Sast    -> print_string (Sast.string_of_sprogram sprog)
+       | LLVM_IR -> print_string (Llvm.string_of_llmodule (Irgen.translate sblock_list))
