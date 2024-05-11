@@ -15,6 +15,7 @@ module StringSet = Set.Make(String)
   (* func_table contains a key of the function name which points to a tuple of a list of args and the return type *)
   (* Class table contains a key of the class name which points to a tuple of a function table and variable table *)
   (* Return a semantically-checked expression, i.e., with a type *)
+
 let rec check_variable symbol_table s = 
     try (StringMap.find (string_of_var s) symbol_table)
     with Not_found -> raise (Failure ("undeclared identifier " ^ string_of_var s))
@@ -221,13 +222,23 @@ and
 
   (*BlockAssign of variable * special_assignment * expr*)
  check_assign symbol_table func_table lvalue assign_type rvalue  =
-    let bop = assignment_to_bop assign_type in
-    let lvalue_type = check_variable symbol_table lvalue in
-    let binop_sexpr = check_binop (VarExpr(lvalue)) bop rvalue symbol_table func_table in 
-    match binop_sexpr with 
-    | (t1, _) -> if ( t1 <>  lvalue_type) then raise (Failure ("Improperly typed assignment, lvalue: " ^ string_of_typevar lvalue_type ^ ", rvalue: " ^ string_of_typevar t1))
-     else 
-        SBlockAssign(lvalue, SAssign, binop_sexpr)
+    if (assign_type != IdentityAssign) then
+      (let bop = assignment_to_bop assign_type in
+      let lvalue_type = check_variable symbol_table lvalue in
+      let binop_sexpr = check_binop (VarExpr(lvalue)) bop rvalue symbol_table func_table in 
+      match binop_sexpr with 
+      | (t1, _) -> if ( t1 <>  lvalue_type) then raise (Failure ("Improperly typed assignment, lvalue: " ^ string_of_typevar lvalue_type ^ ", rvalue: " ^ string_of_typevar t1))
+      else 
+          SBlockAssign(lvalue, SAssign, binop_sexpr))
+    else
+      (let bop = assignment_to_bop assign_type in
+      let lvalue_type = check_variable symbol_table lvalue in
+      let rvalue_sexpr = check_expr symbol_table func_table rvalue in 
+      (* let binop_sexpr = check_binop (VarExpr(lvalue)) bop rvalue symbol_table func_table in  *)
+      match rvalue_sexpr with 
+      | (t1, _) -> if ( t1 <>  lvalue_type) then raise (Failure ("Improperly typed assignment, lvalue: " ^ string_of_typevar lvalue_type ^ ", rvalue: " ^ string_of_typevar t1))
+      else 
+          SBlockAssign(lvalue, SAssign, rvalue_sexpr))
 
 
 and
@@ -411,4 +422,9 @@ and check_block allowed_block_set var_table func_table func_return_type = functi
 | ClassDefinition
 | ClassDefinitionImplements *)
 
-  and check block_list = check_block_list StringSet.empty StringMap.empty StringMap.empty None block_list
+
+
+and check block_list = let builtin_map = (StringMap.add "print_int" (TypeVariable("void"),[TypeVariable("int")]) StringMap.empty)  in
+  check_block_list StringSet.empty StringMap.empty builtin_map None block_list
+
+(* and check block_list = check_block_list StringSet.empty StringMap.empty StringMap.empty None block_list *)

@@ -35,7 +35,7 @@ let translate (block_list) =
   variable_assignment_helper var_map func_map var_name rvalue builder =
     let var_llvalue = StringMap.find var_name var_map in
     let rvalue_llvalue = build_expr var_map func_map builder rvalue in
-    ignore(L.build_store var_llvalue rvalue_llvalue builder); builder
+    ignore(L.build_store rvalue_llvalue var_llvalue builder); builder
 
   and
 
@@ -157,6 +157,8 @@ let translate (block_list) =
   
   and
 
+
+
   build_expr var_map func_map builder ((_, e) : sexpr) = match e with
       SIntLit i -> L.const_int int_t i
     | SBoolLit b -> L.const_int bool_t (if b then 1 else 0)
@@ -190,7 +192,7 @@ let translate (block_list) =
          | A.BitAnd -> L.build_and
          | A.BitOr -> L.build_or
          | A.BitXor -> L.build_xor
-         | _ -> raise (Failure (""))
+         | _ as c-> raise (Failure ("Binop error " ^ A.string_of_op c))
         ) e1' e2' "tmp" builder
     (* | SList l -> todo *)
     (* | SDict d ->  todo *)
@@ -198,13 +200,10 @@ let translate (block_list) =
     | SListCompConditional lc -> 
     | SDictCompUnconditional dc -> 
     | SDictCompConditional dc ->  *)
-    | SWalrus(var, expr) -> raise (Failure (" Not implemented yet"))
-    | SFuncCall (Var("print"), expr) -> raise (Failure (" Not implemented yet"))
-      (*L.build_call printf_func [| (L.build_global_stringptr "%d\n" "fmt" builder) ; (build_expr builder e) |]
-      "printf" builder*)
+    | SWalrus(var, expr) -> raise (Failure (" Walrus Not implemented yet"))
     | SFuncCall (var, expr) -> 
       (* let (fdef, fast) = StringMap.find *)
-      raise (Failure (" Not implemented yet"))
+      raise (Failure ("Not implemented yet"))
     (* | SIndexingExprList *)
     | SIndexingStringLit(e1, e2) -> raise (Failure (" Not implemented yet"))
     and 
@@ -215,6 +214,7 @@ let translate (block_list) =
   build_block var_map func_map builder cur_function = function
     SBlockAssign(Var(var_name), s_assign, s_expr) ->
       (* Evaluate the expression and store it in the variable *)
+      (* raise (Failure("in sblock assign")) *)
       (var_map, func_map, (variable_assignment_helper var_map func_map var_name s_expr builder))
 
     | SBreak -> raise (Failure (" Not implemented yet"))
@@ -231,7 +231,9 @@ let translate (block_list) =
     | SReturnVoid -> raise (Failure (" Not implemented yet"))
     | SWhile(condition, block_list) -> raise (Failure (" Not implemented yet"))
     | SFor(svariable, sexpr, block_list) -> raise (Failure (" Not implemented yet"))
-    | SFuncBlockCall(svariable, sexp_list) -> raise (Failure (" Not implemented yet"))
+    | SFuncBlockCall (Var("print_int"), args) -> ignore(L.build_call printf_func [| (L.build_global_stringptr "%d\n" "fmt" builder) ; (build_expr var_map func_map builder (List.hd args)) |]
+      "print_int" builder); (var_map, func_map, builder)
+    | SFuncBlockCall(svariable, args) -> raise (Failure (" googoo ahaha"))
     (* | SFunctionSignature of sfunction_signature -> *)
     | SFunctionDefinition (sfunction_signature, block_list) -> raise (Failure (" Not implemented yet"))
     (* | SInterfaceDefinition of svariable * sfunction_signature list -> *)
@@ -277,7 +279,9 @@ let translate (block_list) =
     in 
   
   (* Create a "main" function that all code will be inside *)
-  let prog_func = L.define_function "program_entry" (L.function_type (L.void_type context) [||]) the_module in
+  let prog_func = L.define_function "main" (L.function_type (L.void_type context) [||]) the_module in
   let builder = L.builder_at_end context (L.entry_block prog_func) in
+
   build_block_list StringMap.empty StringMap.empty builder None block_list;
+  L.build_ret_void builder;
   the_module
