@@ -14,14 +14,13 @@ let translate (block_list) =
   and bool_t = L.i1_type context
   and char_t = L.i8_type context in
   
-  (* let char_pt = L.pointer_type char_t in *)
+  let char_pt = L.pointer_type char_t in
 
   let rec ltype_of_typ = function
     A.TypeVariable("int") -> int_t
     | A.TypeVariable("bool")  -> bool_t
     | A.TypeVariable("float") -> float_t
-    | _ -> raise (Failure ("idk why this wasnt implemented"))
-    (* | A.TypeVariable("string") -> char_pt *)
+    | A.TypeVariable("string") -> char_pt
 
   and
 
@@ -153,7 +152,7 @@ let translate (block_list) =
   and 
   
   printf_t : L.lltype =
-    L.var_arg_function_type int_t [| L.pointer_type i8_t |] 
+    L.var_arg_function_type int_t [| L.pointer_type char_t |] 
   and
   printf_func : L.llvalue =
     L.declare_function "printf" printf_t the_module
