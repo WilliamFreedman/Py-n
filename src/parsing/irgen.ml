@@ -11,21 +11,23 @@ let translate (block_list) =
 
   let int_t = L.i32_type context
   and float_t = L.double_type context
-  and bool_t - L.i1_type context
+  and bool_t = L.i1_type context
   and char_t = L.i8_type context in
   
-  let char_pt = L.pointer_type char_t in
+  (* let char_pt = L.pointer_type char_t in *)
 
-  let ltype_of_typ = function
-    TypeVariable("int") -> int_t
-    | TypeVariable("bool")  -> bool_t
-    | TypeVariable("float") -> float_t
-    | TypeVariable("string") -> char_pt
+  let rec ltype_of_typ = function
+    A.TypeVariable("int") -> int_t
+    | A.TypeVariable("bool")  -> bool_t
+    | A.TypeVariable("float") -> float_t
+    | _ -> raise (Failure ("idk why this wasnt implemented"))
+    (* | A.TypeVariable("string") -> char_pt *)
+
   and
 
   (* Assigns an expression (rvalue's) llvalue to the variable's llvalue (w/ name var_name) *)
   (* Returns a builder! *)
-  let variable_assignment_helper var_map var_name rvalue builder =
+  variable_assignment_helper var_map var_name rvalue builder =
     let var_llvalue = StringMap.find var_name var_map in
     let rvalue_llvalue = build_expr rvalue var_map builder in
     ignore(L.build_store var_llvalue rvalue_llvalue); builder
@@ -35,13 +37,14 @@ let translate (block_list) =
   (* Declares a variable on the stack using alloca *)
   (* Also evaluates the assigned expression using var_assignment_helper *)
   (* Updates and returns the var_map with the new var_name -> llvalue mapping *)
-  let variable_declaration_helper var_map var_type var_name rvalue builder =
+  variable_declaration_helper var_map var_type var_name rvalue builder =
     let var_llvalue = L.build_alloca (ltype_of_typ var_type) var_name builder in
     let new_var_map = StringMap.add var_name var_llvalue var_map in
     ignore(variable_assignment_helper new_var_map var_name rvalue builder); new_var_map
 
   and
   
+  (*
   let function_definition_helper = function_name return_type param_list func_body map builder context module_name =
     let params_array = (Array.of_list (List.map (fun (_, t) -> ltype_of_typ t) param_list)) in
     let params_array = (Array.of_list (List.map (fun (_, t) -> ltype_of_typ t) param_list)) in
@@ -50,7 +53,8 @@ let translate (block_list) =
     let new_map = List.fold_left (fun m (k, v) -> StringMap.add k v m) map param_list in
     let builder = L.builder_at_end context (L.entry_block the_function) in
     
-    variable_declaration_helper var_type var_name rvalue builder
+    variable_declaration_helper var_type var_name rvalue builder in
+
     let local_vars =
       let add_formal m (t, n) p =
         L.set_value_name n p;
@@ -70,7 +74,7 @@ let translate (block_list) =
       List.fold_left add_local formals fdecl.slocals
     in
 
-    
+    *)
 
     (*
     let params_array = (Array.of_list (List.map ltype_of_typ arg_types_list))
@@ -84,27 +88,42 @@ let translate (block_list) =
     List.map (build_code builder )
     *)
     
-    and
 
   (* we only do division with floating points *)
   (* look at the types of e1 and e2, call L.build_sitofp on the llvalues if they're ints, and then do floating point division on these new llvalues *)
-  let div_helper e1 e2 name builder = 
+  (* div_helper e1 e2 name builder = 
       let (t1, e1x) = e1 and (t2, e2x) = e2 in
-      if t1 = TypeVariable("int") then e1' = (L.build_sitofp e1 float_t name builder)
-      else e1' = e1 in
-      if t2 = TypeVariable("int") then e2' = (L.build_sitofp e2 float_t name builder)
-      else e2' = e2 in
-      L.build_fdiv e1' e2' name builder
-  and      
+
+      (* let e1' = (if t1 = A.TypeVariable then (L.build_sitofp e1 float_t name builder) else e1 in
+      let e2' = if ()
+         ))*)
+      if t1 = A.TypeVariable("int") then let e1' = (L.build_sitofp e1 float_t name builder)
+      else let e1' = e1 in
+      if t2 = A.TypeVariable("int") then let e2' = (L.build_sitofp e2 float_t name builder)
+      else let e2' = e2 in *)
+      (* L.build_fdiv e1' e2' name builder *)
+
+    (* div_helper e1 e2 name builder = 
+      let (t1, e1x) = e1 and (t2, e2x) = e2 in
+      let e1' = 
+        if t1 = A.TypeVariable("int") then (L.build_sitofp e1x float_t name builder)
+      else 
+        e1 in
+      let e2' = 
+        if t2 = A.TypeVariable("int") then (L.build_sitofp e2x float_t name builder)
+      else 
+        e2 in
+      L.build_fdiv e1' e2' name builder      
+    and      
 
   (* floor division - we do regular floating point division and convert the result into a signed integer *)
-  let fdiv_helper e1 e2 name builder = 
+  fdiv_helper e1 e2 name builder = 
     let result_llvalue = div_helper e1 e2 name builder in
     L.build_fptosi result_llvalue int_t name builder
-  and
+  and *)
 
   (*this might not work*)
-  let exp_helper e1 e2 name builder =
+  (* exp_helper e1 e2 name builder =
     let float_t = double_type (context builder) in
     let (t1, e1x) = e1 and (t2, e2x) = e2 in
     let e1' =
@@ -113,9 +132,9 @@ let translate (block_list) =
       else e1x
     in
     let e2' =
-      if t2 = TypeVariable("int") then
+      (if t2 = TypeVariable("int") then
         build_sitofp e2 float_t name builder
-      else e2x
+      else e2x)
     in
     let rec pow base exp acc =
       if exp = 0 then acc
@@ -123,13 +142,25 @@ let translate (block_list) =
     in
     let result = pow e1' e2' (const_float float_t 1.0) in
     result
-  and
-  let add_terminal builder instr =
+  
+  and *)
+
+  add_terminal builder instr =
     match L.block_terminator (L.insertion_block builder) with
       Some _ -> ()
-    | None -> ignore (instr builder) in
+    | None -> ignore (instr builder) 
+
+  and 
   
-  let rec build_expr var_map builder ((_, e) : sexpr) = match e with
+  printf_t : L.lltype =
+    L.var_arg_function_type int_t [| L.pointer_type i8_t |] 
+  and
+  printf_func : L.llvalue =
+    L.declare_function "printf" printf_t the_module
+  
+  and
+
+  build_expr var_map builder ((_, e) : sexpr) = match e with
       SIntLit i -> L.const_int int_t i
     | SBoolLit b -> L.const_int bool_t (if b then 1 else 0)
     | SFloatLit f -> L.const_float float_t f
@@ -142,8 +173,11 @@ let translate (block_list) =
            A.Add     -> L.build_add
          | A.Sub     -> L.build_sub
          | A.Mult    -> L.build_mul
-         | A.Div     -> div_helper 
-         | A.FDiv    -> fdiv_helper
+         | A.Div     -> L.build_fdiv
+          (* div_helper  *)
+         | A.FDiv    ->  raise (Failure (" Not implemented yet"))
+
+          (* fdiv_helper *)
          (* | A.Exp -> I think we need to manually do this *)
          | A.Mod     -> L.build_srem
          | A.And     -> L.build_and
@@ -159,7 +193,7 @@ let translate (block_list) =
          | A.BitAnd -> L.build_and
          | A.BitOr -> L.build_or
          | A.BitXor -> L.build_xor
-         | _ raise (Failure (""))
+         | _ -> raise (Failure (""))
         ) e1' e2' "tmp" builder
     (* | SList l -> todo *)
     (* | SDict d ->  todo *)
@@ -168,37 +202,41 @@ let translate (block_list) =
     | SDictCompUnconditional dc -> 
     | SDictCompConditional dc ->  *)
     | SWalrus
+    | SFuncCall ("print", expr) ->
+      L.build_call printf_func [| (L.build_global_stringptr "%d\n" "fmt" builder) ; (build_expr builder e) |]
+      "printf" builder
     | SFuncCall (var, expr) -> 
-      let (fdef, fast) = StringMap.find
+      (* let (fdef, fast) = StringMap.find *)
+      raise (Failure (" Not implemented yet"))
     (* | SIndexingExprList *)
-    | SIndexingStringLit
+    | SIndexingStringLit -> raise (Failure (" Not implemented yet"))
     and 
 
   (* Takes in a var_map, func_map, builder, and block and returns new var_map, func_map builder *)
   (* var_map is a mapping from variable names (strings) to their corresponding llvalues *)
   (* func_map is a mapping from function names (strings) to their corresponding llvalues *)
-  let rec build_block var_map func_map builder cur_function = function
-    SBlockAssign of var_name * s_assign * s_expr ->
+  build_block var_map func_map builder cur_function = function
+    SBlockAssign(var_name, s_assign, s_expr) ->
       (* Evaluate the expression and store it in the variable *)
       (var_map, func_map, (variable_assignment_helper var_map var_name s_expr builder))
 
-    | SBreak -> 
-    | SContinue -> 
-    | SPass -> 
+    | SBreak -> raise (Failure (" Not implemented yet"))
+    | SContinue -> raise (Failure (" Not implemented yet"))
+    | SPass -> raise (Failure (" Not implemented yet"))
 
-    | SVarDec of typ * var_name * s_expr -> 
+    | SVarDec (typ, var_name, s_exp) -> 
       (* Declare the variable, evaluate the expression and store it in the variable *)
       (* define_global is never used, at least for now *) 
       let new_var_map = variable_declaration_helper var_map typ var_name s_expr builder in
       (new_var_map, func_map, builder)
 
-    | SReturnVal of sexpr ->
-    | SReturnVoid ->
-    | SWhile of sexpr * sblock list ->
-    | SFor of svariable * sexpr * sblock list ->
-    | SFuncBlockCall of svariable * sexpr list ->
+    | SReturnVal(sexpr) -> raise (Failure (" Not implemented yet"))
+    | SReturnVoid -> raise (Failure (" Not implemented yet"))
+    | SWhile(condition, block_list) -> raise (Failure (" Not implemented yet"))
+    | SFor(svariable, sexpr, block_list) -> raise (Failure (" Not implemented yet"))
+    | SFuncBlockCall(svariable, sexp_list) -> raise (Failure (" Not implemented yet"))
     (* | SFunctionSignature of sfunction_signature -> *)
-    | SFunctionDefinition of sfunction_signature * sblock list ->
+    | SFunctionDefinition (sfunction_signature, block_list) -> raise (Failure (" Not implemented yet"))
     (* | SInterfaceDefinition of svariable * sfunction_signature list -> *)
     (* | SClassDefinition of svariable * sblock list -> *)
     (* | SClassDefinitionImplements of svariable * svariable list * sblock list -> *)
@@ -236,10 +274,10 @@ let translate (block_list) =
 
       
 
-  let build_block_list var_table func_table builder = function 
+  build_block_list var_table func_table builder = function 
     | [] -> []
     | x :: xs -> let (new_var_table, new_func_table, new_builder) = build_block var_table builder x in build_block_list new_var_table new_func_table new_builder xs
-    and
+    in 
   
   (* Create a "main" function that all code will be inside *)
   let prog_func = L.define_function "program_entry" (L.function_type (void_type context) [||]) the_module in
