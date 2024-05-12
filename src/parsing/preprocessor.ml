@@ -24,7 +24,7 @@ let process_line define_map current_indent line =
         if ((indent_diff - current_indent) mod 4) != 0 then raise (Failure ("Indentation error in line " ^ line)) else
         string_repeat ((indent_diff - current_indent)/4) "INDENT"
       else if indent_diff < current_indent then
-        (String.concat "\n" (Array.to_list (Array.make ((current_indent - indent_diff) / 4) "DEDENT "))) ^ "\n"
+        (String.concat "\n" (Array.to_list (Array.make ((current_indent - indent_diff) / 4) "DEDENT "))) (*^ "\n"*)
       else
         "" in
     let updated_indent = indent_diff in

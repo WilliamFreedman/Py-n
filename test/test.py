@@ -11,7 +11,7 @@ print(flag)
 # While loop w/ counter
 counter: int = 0
 while counter < 10:
-	counter += 1
+    counter += 1
 
 print(counter)
 
@@ -19,19 +19,20 @@ print(counter)
 # If-else conditional
 
 if x > 5:
-	y : int = 10
+    y : int = 10
 else :
-	y : int = 20
+    y : int = 20
   
 print(y)
 
 
 # Nested control w/ break
-if x <= 100:
-	while x != 0 :
-		x -= 1
-		if x == 10 :
-			break
+if x<100:
+    while x!=0:
+        x -=1
+        if x==10:
+            break
+
 print(x)
 
 # Type casting w/ control stmt
@@ -39,14 +40,9 @@ x : int = 1
 y : float = x + 3.14
 
 if y > 4:
-	while x < 5 :
-		x += 1
+    while x < 5 :
+        x += 1
 else:
-	print(x)
+    print(x)
 
-# Class definition
-class Circle:
-    radius : int
 
-    def area(self) -> float:
-        return 3.14159 * (self.radius * self.radius)

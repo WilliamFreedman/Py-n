@@ -156,8 +156,9 @@ and binop_return_type t1 op t2=
     | (TypeVariable("float"), TypeVariable("float")) -> TypeVariable("bool")
     | (TypeVariable("float"), TypeVariable("int")) -> TypeVariable("bool")
     | (TypeVariable("int"), TypeVariable("float")) -> TypeVariable("bool")
+    | (TypeVariable("int"), TypeVariable("int")) -> TypeVariable("bool")
     | (_, _) -> raise (Failure "Invalid binop types"))
-  | Neq | Less ->
+  | Neq | Less | More | Geq | Leq ->
     (match (t1, t2) with 
     | (TypeVariable("int"), TypeVariable("int")) -> TypeVariable("bool")
     | (TypeVariable("float"), TypeVariable("float")) -> TypeVariable("bool")
@@ -178,10 +179,15 @@ and binop_return_type t1 op t2=
     | (TypeVariable("int"), TypeVariable("int")) -> TypeVariable("int")
     | (TypeVariable("float"), TypeVariable("float")) -> TypeVariable("float")
     | (_,_) -> raise (Failure "Invalid binop types"))
-  | Iden | Mult | Div | FDiv ->
+  | Iden | Mult | FDiv ->
     ( match (t1, t2) with
     | (t1, t2) when t1 = t2 -> t1    
     | (_, _) -> raise (Failure "Invalid binop types"))
+  | Div -> 
+    ( match (t1,t2) with
+    | (TypeVariable("int"), TypeVariable("int")) -> TypeVariable("int")
+    | (TypeVariable("float"), TypeVariable("float")) -> TypeVariable("float")
+    | (_,_) -> raise (Failure "Invalid binop types"))
   | Exp -> 
     ( match (t1, t2) with
     | (TypeVariable("int"), TypeVariable("int")) -> TypeVariable("int")
@@ -427,4 +433,3 @@ and check_block allowed_block_set var_table func_table func_return_type = functi
 and check block_list = let builtin_map = (StringMap.add "print_int" (TypeVariable("void"),[TypeVariable("int")]) StringMap.empty)  in
   check_block_list StringSet.empty StringMap.empty builtin_map None block_list
 
-(* and check block_list = check_block_list StringSet.empty StringMap.empty StringMap.empty None block_list *)

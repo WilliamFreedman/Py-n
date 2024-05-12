@@ -1,10 +1,11 @@
 x:int = 4
 y:int = 5
-def binary_ops(x:int,y:int):
-    print(x + y)
-    print(x - y)
-    print(x * y)
-    print(x / y)
-    print(x // y)
-    print(x ** y)
-    print(x % y)
+
+a: float = 4.0
+b: float = 4.0
+
+print_int(x + y)
+print_int(x - y)
+print_int(x * y)
+print_int(x % y)
+z:float = a/b

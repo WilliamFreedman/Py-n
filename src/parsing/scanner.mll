@@ -31,8 +31,8 @@ rule tokenize = parse
 | '^' { BITXOR }
 | '~' { BITNOT }
 | ":=" { WALRUS }
-| '<' { GT }
-| '>' { LT }
+| '>' { GT }
+| '<' { LT }
 | ">=" { GEQ }
 | "<=" { LEQ }
 | "==" { EQ }

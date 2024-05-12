@@ -36,8 +36,13 @@ let translate (block_list) =
     let var_llvalue = StringMap.find var_name var_map in
     let rvalue_llvalue = build_expr var_map func_map builder rvalue in
     ignore(L.build_store rvalue_llvalue var_llvalue builder); builder
-
+    (*
+    let rvalue_llvalue = build_expr var_map func_map builder rvalue in
+    ignore(L.build_store rvalue_llvalue var_llvalue builder); builder
+    *)
   and
+
+
 
   (* Declares a variable on the stack using alloca *)
   (* Also evaluates the assigned expression using var_assignment_helper *)
@@ -147,8 +152,13 @@ let translate (block_list) =
     in
     let result = pow e1' e2' (const_float float_t 1.0) in
     result
+
+    
   
   and *)
+
+
+  
 
   add_terminal builder instr =
     match L.block_terminator (L.insertion_block builder) with
@@ -156,8 +166,6 @@ let translate (block_list) =
     | None -> ignore (instr builder) 
   
   and
-
-
 
   build_expr var_map func_map builder ((_, e) : sexpr) = match e with
       SIntLit i -> L.const_int int_t i
@@ -168,32 +176,49 @@ let translate (block_list) =
     | SBinop (e1, op, e2) ->
         let e1' = build_expr var_map func_map builder e1
         and e2' = build_expr var_map func_map builder e2 in
-        (match op with
-           A.Add     -> L.build_add
-         | A.Sub     -> L.build_sub
-         | A.Mult    -> L.build_mul
-         | A.Div     -> L.build_fdiv
-          (* div_helper  *)
-         | A.FDiv    ->  raise (Failure (" Not implemented yet"))
+        if op <> A.Div then
+          ((match op with
+            A.Add     -> L.build_add
+          | A.Sub     -> L.build_sub
+          | A.Mult    -> L.build_mul
+          | A.Div     -> 
+            if (L.type_of e1' = float_t && L.type_of e2' = float_t) then
+              L.build_fdiv
+            else if (L.type_of e1' = int_t && L.type_of e2' = int_t) then
+              L.build_sdiv
+            else
+              raise (Failure (" Not implemented yet"))
+            (* div_helper  *)
+          | A.FDiv    ->  raise (Failure (" Not implemented yet"))
 
-          (* fdiv_helper *)
-         (* | A.Exp -> I think we need to manually do this *)
-         | A.Mod     -> L.build_srem
-         | A.And     -> L.build_and
-         | A.Or      -> L.build_or
-         | A.Xor     -> L.build_xor
-         | A.Eq   -> L.build_icmp L.Icmp.Eq
-         | A.Neq     -> L.build_icmp L.Icmp.Ne
-         | A.Geq  -> L.build_icmp L.Icmp.Sge
-         | A.Leq  -> L.build_icmp L.Icmp.Sle
-         | A.Less    -> L.build_icmp L.Icmp.Slt
-         | A.LShift -> L.build_shl
-         | A.RShift -> L.build_ashr
-         | A.BitAnd -> L.build_and
-         | A.BitOr -> L.build_or
-         | A.BitXor -> L.build_xor
-         | _ as c-> raise (Failure ("Binop error " ^ A.string_of_op c))
-        ) e1' e2' "tmp" builder
+            (* fdiv_helper *)
+          (* | A.Exp -> I think we need to manually do this *)
+          | A.Mod     -> L.build_srem
+          | A.And     -> L.build_and
+          | A.Or      -> L.build_or
+          | A.Xor     -> L.build_xor
+          | A.Eq   -> L.build_icmp L.Icmp.Eq
+          | A.Neq     -> L.build_icmp L.Icmp.Ne
+          | A.Geq  -> L.build_icmp L.Icmp.Sge
+          | A.Leq  -> L.build_icmp L.Icmp.Sle
+          | A.Less    -> L.build_icmp L.Icmp.Slt
+          | A.More    -> L.build_icmp L.Icmp.Sgt
+          | A.LShift -> L.build_shl
+          | A.RShift -> L.build_ashr
+          | A.BitAnd -> L.build_and
+          | A.BitOr -> L.build_or
+          | A.BitXor -> L.build_xor
+          | _ as c-> raise (Failure ("Binop error " ^ A.string_of_op c))
+          ) e1' e2' "tmp" builder)
+        else
+          if (L.type_of e1' = float_t && L.type_of e2' = float_t) then
+            L.build_fdiv e1' e2' "tmp" builder
+          else if (L.type_of e1' = int_t && L.type_of e2' = int_t) then
+            let e1f = L.build_sitofp e1' float_t "c1" builder in
+            let e2f = L.build_sitofp e2' float_t "c2" builder in
+            raise (Failure (" divi Not implemented yet"))
+          else
+            raise (Failure (" divi2 Not implemented yet"))
     (* | SList l -> todo *)
     (* | SDict d ->  todo *)
     (* | SListCompUnconditional lc ->  
@@ -229,7 +254,21 @@ let translate (block_list) =
 
     | SReturnVal(sexpr) -> raise (Failure (" Not implemented yet"))
     | SReturnVoid -> raise (Failure (" Not implemented yet"))
-    | SWhile(condition, block_list) -> raise (Failure (" Not implemented yet"))
+    | SWhile(condition, block_list) -> 
+      raise (Failure (" Not implemented yet"))
+      (* let while_bb = L.append_block context "while" cur_function in 
+      let build_br_while = L.build_br while_bb in
+      ignore (build_br_while builder);
+      let while_builder = L.builder_at_end context while_bb in
+      let bool_val = build_expr var_map func_map while_builder condition in
+      
+      let body_bb = L.append_block context "while_body" cur_function in
+      add_terminal (build_block_list var_map func_map (L.builder_at_end context body_bb) cur_function block_list) build_br_while;
+      
+      let end_bb = L.append_block context "while_end" cur_function in
+      
+      ignore(L.build_cond_br bool_val body_bb end_bb while_builder);
+      (var_map, func_map, L.builder_at_end context end_bb) *)
     | SFor(svariable, sexpr, block_list) -> raise (Failure (" Not implemented yet"))
     | SFuncBlockCall (Var("print_int"), args) -> ignore(L.build_call printf_func [| (L.build_global_stringptr "%d\n" "fmt" builder) ; (build_expr var_map func_map builder (List.hd args)) |]
       "print_int" builder); (var_map, func_map, builder)
@@ -239,42 +278,55 @@ let translate (block_list) =
     (* | SInterfaceDefinition of svariable * sfunction_signature list -> *)
     (* | SClassDefinition of svariable * sblock list -> *)
     (* | SClassDefinitionImplements of svariable * svariable list * sblock list -> *)
-    (* | SIfEnd(condition, block_list) | SElifEnd(condition, block_list)->
+    | SIfEnd(condition, block_list) | SElifEnd(condition, block_list)->
       let bool_val = build_expr var_map func_map builder condition in
       let then_bb = L.append_block context "then" cur_function in
-      let (new_var_map, new_func_map, _) = (build_block_list var_map func_map (L.builder_at_end context then_bb) cur_function block_list) in
+      ignore (build_block_list var_map func_map (L.builder_at_end context then_bb) cur_function block_list);
 
       let end_bb = L.append_block context "if_end" cur_function in
       let build_br_end = L.build_br end_bb in (* partial function *)
       add_terminal (L.builder_at_end context then_bb) build_br_end;
       
       ignore(L.build_cond_br bool_val then_bb end_bb builder);
-      (new_var_map, new_func_map, L.builder_at_end context end_bb)
-    | SIfNonEnd(condition, block_list, else_block) | SElifNonEnd(condition, block_list, else_block) ->
+      (var_map, func_map, L.builder_at_end context end_bb)
+    | SIfNonEnd(condition, block_list, else_block) ->
+      (*
       let bool_val = build_expr var_map func_map builder condition in
       let then_bb = L.append_block context "then" cur_function in
       ignore (build_block_list var_map func_map (L.builder_at_end context then_bb) cur_function block_list);
-      let else_bb = L.append_block context "else" cur_function in
-      ignore (build_block var_map func_map (L.builder_at_end context else_bb) cur_function else_block);
+      (* have to jump to if_end here, since the condition was true and we executed the statements here*)
+      (* we haven't created the if_end yet (this is the first if), so we create it now and pass it on maybe? *)
+      (* the idea is that future elifs need to jump to this if_end if they are successful *)
+      let if_end_bb = L.append_block context "if_end"  cur_function in
+      *) raise (Failure("conditional"))
+    | SElifNonEnd(condition, block_list, else_block) ->
+      let bool_val = build_expr var_map func_map builder condition in
+      let then_bb = L.append_block context "then" cur_function in
 
+      ignore (build_block_list var_map func_map (L.builder_at_end context then_bb) cur_function block_list);
+      (* have to jump to if_end here, since the condition was true and we executed the statements here *)
+        
+      (* the else_bb is the label for the next type of instruction *)
+      (* if we are*)
+      let else_bb = L.append_block context "else" cur_function in
+      ignore(build_block var_map func_map (L.builder_at_end context else_bb) cur_function else_block);
+      ignore(L.build_cond_br bool_val then_bb else_bb builder);
+
+      (var_map, func_map,  builder)
+    | SElseEnd(block_list) ->
+      (* No blocks, our builder is at the end of the block of the previous if *)
+      let then_bb = L.append_block context "then" cur_function in
+      ignore (build_block_list var_map func_map (L.builder_at_end context then_bb) cur_function block_list);
       let end_bb = L.append_block context "if_end" cur_function in
+
       let build_br_end = L.build_br end_bb in (* partial function *)
       ignore (add_terminal (L.builder_at_end context then_bb) build_br_end);
-      (add_terminal (L.builder_at_end context else_bb) build_br_end);
-            
-      (* (match else_block with 
-      | SElifNonEnd -> build_block var_map func_map builder cur_function else_block
-      | SElifEnd -> build_block var_map func_map builder cur_function else_block
-      | SElseEnd -> ) *)
-    | SElseEnd(block_list) ->
-      let then_bb = L.append_block context "then" cur_function in
-      ignore (build_block_list var_map func_map (L.builder_at_end context then_bb) cur_function block_list); *)
+      (var_map, func_map, (L.builder_at_end context end_bb))
+
   and
 
-      
-
   build_block_list var_table func_table builder cur_function = function 
-    | [] -> []
+    | [] -> builder
     | x :: xs -> let (new_var_table, new_func_table, new_builder) = build_block var_table func_table builder cur_function x in build_block_list new_var_table new_func_table new_builder cur_function xs
     in 
   
@@ -282,6 +334,6 @@ let translate (block_list) =
   let prog_func = L.define_function "main" (L.function_type (L.void_type context) [||]) the_module in
   let builder = L.builder_at_end context (L.entry_block prog_func) in
 
-  build_block_list StringMap.empty StringMap.empty builder None block_list;
-  L.build_ret_void builder;
+  let new_builder = build_block_list StringMap.empty StringMap.empty builder prog_func block_list in
+  L.build_ret_void new_builder;
   the_module
