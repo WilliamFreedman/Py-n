@@ -1,0 +1,49 @@
+@DEFINE THREE 3
+@DEFINE FOUR 4
+print_int(THREE + FOUR)
+
+def fib(n: int) -> int:
+    if n == 0:
+        return 0
+    elif n == 1:
+        return 1
+    
+    return fib(n - 1) + fib(n - 2)
+
+
+x : int = 0
+
+while (x < 10):
+    x += 1
+    if x == 5:
+        continue
+    
+    print_int(fib(x))
+
+
+def fib_iter(n: int) -> int:
+    first: int = 0
+    second: int = 1
+    current: int = 0
+    result: int = 0
+    while True:
+        if current >= n:
+            break
+        
+        result = first + second
+        first = second
+        second = result
+        current += 1
+    
+    return result
+
+
+print_int(fib_iter(20))
+
+
+def cylinder_volume(radius: int, height: int) -> float:
+    pi: float = 3.1415
+    
+    return pi * radius * radius * height
+
+print_float(cylinder_volume(10, 4))
