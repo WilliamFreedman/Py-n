@@ -1,0 +1,20 @@
+def add(x: int, y: int) -> int:
+    return x + y
+DEDENT 
+print_int(add(4,5))
+
+def fib(n: int) -> int:
+    if n == 0:
+        return 0
+    elif n == 1:
+        return 1
+DEDENT     
+    return fib(n - 1) + fib(n - 2)
+DEDENT 
+
+x : int = 0
+
+while (x < 10):
+    print_int(fib(x))
+    x += 1
+DEDENT

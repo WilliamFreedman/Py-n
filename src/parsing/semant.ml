@@ -1,5 +1,3 @@
-(*TODO: add binops to scanner, no-op binop*)
-
 open Ast
 open Sast
 
@@ -25,13 +23,8 @@ and check_expr var_table func_table  = function
   | FloatLit l -> (TypeVariable("float"), SFloatLit l)
   | BoolLit l -> (TypeVariable("bool"), SBoolLit l)
   | StringLit l -> (TypeVariable("string") , SStringLit l)
-  (*| SVarExpr var -> (check the type of var, SVarExpr (convert var to svar type))*)
   | VarExpr var -> (match var with
     | Var(v) -> (check_variable var_table (Var(v)), SVarExpr(Var(v)))
-    (* | VarDot(v1, v2) -> let (v1_typevar, v1_sem) = check_expr v1 ar_table func_table  in
-      let (_, var_table) = class_details (string_of_typevar v1_typevar)  in 
-      let typ = StringMap.find v2 var_table
-      in (typ, SVarDot((v1_typevar, v1_sem), check_expr v2 var_table func_table )) *)
     | VarIndex(v1, e) -> (let (t, sx) = check_expr var_table func_table (VarExpr(v1)) in match t with
       | Dict(key_type, value_type) -> 
         (let (typvar, _) = check_expr var_table func_table e  in 
@@ -195,7 +188,6 @@ and binop_return_type t1 op t2=
     | (TypeVariable("int"), TypeVariable("int")) -> TypeVariable("int")
     | (TypeVariable("float"), TypeVariable("int")) -> TypeVariable("float")   
     | (_, _) -> raise (Failure "Invalid binop types"))
-  (* | _ -> raise (Failure "Unknown binop found") *)
  
 and
 
@@ -224,7 +216,6 @@ and
   | RShiftAssign -> RShift
   | LShiftAssign -> LShift
   | ModAssign -> Mod
-  (* | _ -> raise (Failure "Unknown binop found") *)
 
 and
 
@@ -242,7 +233,6 @@ and
       (let bop = assignment_to_bop assign_type in
       let lvalue_type = check_variable symbol_table lvalue in
       let rvalue_sexpr = check_expr symbol_table func_table rvalue in 
-      (* let binop_sexpr = check_binop (VarExpr(lvalue)) bop rvalue symbol_table func_table in  *)
       match rvalue_sexpr with 
       | (t1, _) -> if ( t1 <>  lvalue_type) then raise (Failure ("Improperly typed assignment, lvalue: " ^ string_of_typevar lvalue_type ^ ", rvalue: " ^ string_of_typevar t1))
       else 
@@ -309,7 +299,6 @@ function_declaration_helper symbol_table func_table func_name return_type args =
 (* func_table contains a key of the function name which points to a tuple of a list of args and the return type *)
 (* func_return_type: typevar option for the return type of the current function (None if we aren't in a function) *)
 (* and the Ast block type *)
-
 and
 (* Return list of sblocks given blocks *)
 check_block_list allowed_block_set var_table func_table func_return_type = function
@@ -385,7 +374,6 @@ and check_block allowed_block_set var_table func_table func_return_type = functi
   | FuncBlockCall(fname, args) -> 
     let (_, func_name, sexpr_list) = check_func_call var_table func_table fname args in
     (var_table, func_table, allowed_block_set, func_return_type, SFuncBlockCall(func_name, sexpr_list))
-  (* | FunctionSignature *) 
   | FunctionDefinition(func_sig, block_list) -> 
     let (variable, arg_list, return_type) = func_sig in
     let new_func_table = function_declaration_helper var_table func_table variable return_type arg_list in
@@ -423,10 +411,6 @@ and check_block allowed_block_set var_table func_table func_return_type = functi
     (var_table, func_table, allowed_block_set, func_return_type, SElseEnd(sblock_list))
 
   | _ -> raise (Failure ("Unsupported block type"))
-(*| InterfaceDefinition
-| ClassDefinition
-| ClassDefinitionImplements *)
-
 
 
 and check block_list =  let builtin_entries =

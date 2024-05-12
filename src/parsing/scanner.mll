@@ -68,8 +68,6 @@ rule tokenize = parse
 | "from" {  FROM  }
 | "while" { WHILE  }
 | "for" { FOR }
-(* | "interface" { INTERFACE } *) 
-(* | "class" { CLASS } *)
 | "None" { NONE }
 | "INDENT" { INDENT }
 | "int" { INT }
@@ -91,26 +89,4 @@ rule tokenize = parse
 | '\''alphabet*'\'' as lit { STRINGLIT(lit) }
 | ['a'-'z''A'-'Z''_']+['a'-'z''A'-'Z''_' '0'-'9']* as id { VARIABLE(id) }
 | eof { EOF }
-
-(* {
-    let lexbuf = Lexing.from_channel stdin in
-    try
-        while true do
-            ignore (tokenize lexbuf)
-        done
-    with _ -> exit 0
-}
-(* *)
-rule lex_float = parse
-   | digit+('E'|'e')('+'|'-')?digit+ as out {out}
-   | digit+'.' as out {out}
-   | digit+'.'('E'|'e')('+'|'-')?digit+ as out {out}
-   | ('E'|'e')('+'|'-')?digit+ as out {out}
-   | '.'digit+ as out {out}
-   | '.'digit+('E'|'e')('+'|'-')?digit+ as out {out}
-   | digit+('E'|'e')('+'|'-')?digit+ as out {out}
-   | digit+'.'digit+ as out {out}
-   | digit+'.'digit+('E'|'e')('+'|'-')?digit+ as out {out}
-*)
-
 

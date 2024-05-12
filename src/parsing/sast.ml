@@ -1,7 +1,5 @@
 open Ast
 
-(** (should be semantically checked) types in our language **)
-
 type sassignment = 
   SAssign
 
@@ -26,9 +24,7 @@ and sx =
   (** | IndexingVar of svariable * sexpr **)
   | SIndexingStringLit of string * sexpr
   | SIndexingExprList of sexpr * sexpr
-  (** | Return of sexpr **)
 
-(*{DictCompUnconditional($2, $4, Var(6), Var($8), $10, 12$)}*)
 type sarg = svariable * typevar
 
 type sfunction_signature = svariable * sarg list * typevar
@@ -60,27 +56,7 @@ type sprogram = {
   body: sblock list
 }
 
-(* Pretty-printing functions *)
-(* let string_of_sspecial_assignment = function
-SIdentityAssign -> "="
-  | SPlusAssign -> "+="
-  | SMinusAssign -> "-=" 
-  | STimesAssign -> "*="
-  | SDivideAssign -> "/="
-  | SFloorDivAssign -> "//="
-  | SExpAssign -> "**="
-  | SAndAssign -> "&="
-  | SOrAssign -> "|="
-  | SXorAssign -> "^=" 
-  | SRShiftAssign -> ">>="
-  | SLShiftAssign -> "<<="
-  | SModAssign -> "%=" *)
-
 let rec string_of_svar = string_of_var
-  (* | (t, var) -> "(" ^ string_of_typevar t ^ "," ^ string_of_var var ^ ")"
-    SVar(v) -> v
-    (* | SVarDot(v1, v2) -> string_of_svar v1 ^ "." ^ string_of_svar v2 *)
-    | SVarIndex(v, e) -> string_of_svar v ^ "[" ^ string_of_sexpr e ^ "]" *)
 and string_of_sexpr (t, e) =
   "(" ^ string_of_typevar t ^ " : " ^ (match e with
     SIntLit(l) -> string_of_int l
@@ -105,8 +81,6 @@ and string_of_sexpr (t, e) =
   | SDictCompConditional(e1,e2,v1,v2,e3,e4) -> "{" ^ string_of_sexpr e1 ^ " : " ^ string_of_sexpr e2 ^ " for (" ^ string_of_svar v1 ^ ", " ^ string_of_svar v2 ^ ") in " ^ string_of_sexpr e3 ^ "if" ^ string_of_sexpr e4 ^ "}" 
   | SDictCompUnconditional(e1,e2,v1,v2,e3) -> "{" ^ string_of_sexpr e1 ^ " : " ^ string_of_sexpr e2 ^ " for (" ^ string_of_svar v1 ^ ", " ^ string_of_svar v2 ^ ") in " ^ string_of_sexpr e3 ^ "}" 
   ) ^ ")"
-
-  (* | _ -> raise (Failure "Invalid expr") *)
 
 let string_of_sarg = function
 (v, t) -> string_of_svar v ^ " : " ^ string_of_typevar t

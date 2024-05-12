@@ -82,109 +82,6 @@ let translate (block_list) =
     
   and
   
-  (*
-  let function_definition_helper = function_name return_type param_list func_body map builder context module_name =
-    let params_array = (Array.of_list (List.map (fun (_, t) -> ltype_of_typ t) param_list)) in
-    let params_array = (Array.of_list (List.map (fun (_, t) -> ltype_of_typ t) param_list)) in
-    let new_function_type = L.function_type (ltype_of_typ return_type) params_array in
-    let new_function = L.declare_function function_name new_function_type module_name in
-    let new_map = List.fold_left (fun m (k, v) -> StringMap.add k v m) map param_list in
-    let builder = L.builder_at_end context (L.entry_block the_function) in
-    
-    variable_declaration_helper var_type var_name rvalue builder in
-
-    let local_vars =
-      let add_formal m (t, n) p =
-        L.set_value_name n p;
-        let local = L.build_alloca (ltype_of_typ t) n builder in
-        ignore (L.build_store p local builder);
-        StringMap.add n local m
-
-      (* Allocate space for any locally declared variables and add the
-       * resulting registers to our map *)
-      and add_local m (t, n) =
-        let local_var = L.build_alloca (ltype_of_typ t) n builder
-        in StringMap.add n local_var m
-      in
-
-      let formals = List.fold_left2 add_formal StringMap.empty fdecl.sformals
-          (Array.to_list (L.params the_function)) in
-      List.fold_left add_local formals fdecl.slocals
-    in
-
-    *)
-
-    (*
-    let params_array = (Array.of_list (List.map ltype_of_typ arg_types_list))
-
-    let new_function_type = L.function_type (ltype_of_typ return_type) params_array in
-    let new_function = L.declare_function function_name new_function_type module_name in
-    let end_of_block = L.position_at_end entry_block builder in
-
-    let arg_values = List.map (fun a -> L.param new_function a) arg_types_list in
-
-    List.map (build_code builder )
-    *)
-    
-
-  (* we only do division with floating points *)
-  (* look at the types of e1 and e2, call L.build_sitofp on the llvalues if they're ints, and then do floating point division on these new llvalues *)
-  (* div_helper e1 e2 name builder = 
-      let (t1, e1x) = e1 and (t2, e2x) = e2 in
-
-      (* let e1' = (if t1 = A.TypeVariable then (L.build_sitofp e1 float_t name builder) else e1 in
-      let e2' = if ()
-         ))*)
-      if t1 = A.TypeVariable("int") then let e1' = (L.build_sitofp e1 float_t name builder)
-      else let e1' = e1 in
-      if t2 = A.TypeVariable("int") then let e2' = (L.build_sitofp e2 float_t name builder)
-      else let e2' = e2 in *)
-      (* L.build_fdiv e1' e2' name builder *)
-
-    (* div_helper e1 e2 name builder = 
-      let (t1, e1x) = e1 and (t2, e2x) = e2 in
-      let e1' = 
-        if t1 = A.TypeVariable("int") then (L.build_sitofp e1x float_t name builder)
-      else 
-        e1 in
-      let e2' = 
-        if t2 = A.TypeVariable("int") then (L.build_sitofp e2x float_t name builder)
-      else 
-        e2 in
-      L.build_fdiv e1' e2' name builder      
-    and      
-
-  (* floor division - we do regular floating point division and convert the result into a signed integer *)
-  fdiv_helper e1 e2 name builder = 
-    let result_llvalue = div_helper e1 e2 name builder in
-    L.build_fptosi result_llvalue int_t name builder
-  and *)
-
-  (*this might not work*)
-  (* exp_helper e1 e2 name builder =
-    let float_t = double_type (context builder) in
-    let (t1, e1x) = e1 and (t2, e2x) = e2 in
-    let e1' =
-      if t1 = TypeVariable("int") then
-        build_sitofp e1 float_t name builder
-      else e1x
-    in
-    let e2' =
-      (if t2 = TypeVariable("int") then
-        build_sitofp e2 float_t name builder
-      else e2x)
-    in
-    let rec pow base exp acc =
-      if exp = 0 then acc
-      else pow base (exp - 1) (build_fmul base acc name builder)
-    in
-    let result = pow e1' e2' (const_float float_t 1.0) in
-    result
-
-    
-  
-  and *)
-  
   add_terminal builder instr =
     match L.block_terminator (L.insertion_block builder) with
       Some _ -> ()
@@ -280,7 +177,6 @@ let translate (block_list) =
       (* Evaluate the expression and store it in the variable *)
       (* raise (Failure("in sblock assign")) *)
       (var_map, func_map, (variable_assignment_helper var_map func_map var_name s_expr builder))
-
     | SBreak -> (try let block = StringMap.find "break" block_map in ignore(L.build_br block builder); (var_map, func_map, builder)
       with Not_found -> raise (Failure ("Break cannot be placed outside of a loop")))
     | SContinue -> (try let block = StringMap.find "continue" block_map in ignore(L.build_br block builder); (var_map, func_map, builder)
@@ -426,6 +322,7 @@ let translate (block_list) =
 
       (* Does it really matter what gets returned here? We stack up into a previous if / elif after all... *)
       (var_map, func_map, builder)
+    | _ -> raise (Failure("Not an implemented build_block rule."))
 
   and
 

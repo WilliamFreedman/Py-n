@@ -1,6 +1,9 @@
 let rec string_repeat n s =
   if n = 0 then "" else s ^ " " ^ string_repeat (n - 1) s
 
+let should_ignore str = 
+  ((String.for_all (fun x -> x = ' ')) str || ((String.length str) = 0))
+
 let process_line define_map current_indent line line_num =
   let indent_diff = String.length line - String.length (String.trim line) in
   let indent_change = 
@@ -20,7 +23,10 @@ let process_line define_map current_indent line line_num =
   (* if a line is blank (i.e. nothing more than spaces), then we should avoid tracking indent changes *)
 
   let process_line define_map current_indent line line_num =
+    
     let indent_diff = String.length line - String.length (String.trim line) in
+    if should_ignore line then
+      
     let indent_change = 
       if indent_diff > current_indent then
         if ((indent_diff - current_indent) mod 4) != 0 then raise (Failure ("Indentation error in line " ^ string_of_int !line_num ^ ": "^ line)) else
