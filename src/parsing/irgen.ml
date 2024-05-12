@@ -30,7 +30,7 @@ let translate block_list =
 
       (* Assigns an expression (rvalue's) llvalue to the variable's llvalue (w/ name var_name) *)
       (* Returns a builder! *)
-      variable_assignment_helper var_map func_map var_name rvalue builder =
+  variable_assignment_helper var_map func_map var_name rvalue builder =
     let var_llvalue = StringMap.find var_name var_map in
     let rvalue_llvalue = build_expr var_map func_map builder rvalue in
     ignore (L.build_store rvalue_llvalue var_llvalue builder);
@@ -93,15 +93,14 @@ let translate block_list =
     if L.type_of e1' = float_t && L.type_of e2' = float_t then
       float_option e1' e2' "tmp" builder
     else if L.type_of e1' = int_t && L.type_of e2' = int_t then
+      int_option e1' e2' "tmp" builder
+    else if L.type_of e1' = int_t && L.type_of e2' = float_t then
       let e1f = L.build_sitofp e1' float_t "c1" builder in
+      float_option e1f e2' "tmp" builder;
+    else if L.type_of e1' = float_t && L.type_of e2' = int_t then
       let e2f = L.build_sitofp e2' float_t "c2" builder in
-    int_option e1f e2f "tmp" builder
-    else if L.type_of e1' = int_t then
-      let e1f = L.build_sitofp e1' float_t "c1" builder in
-      float_option e1f e2' "tmp" builder
-    else
-      let e2f = L.build_sitofp e2' float_t "c2" builder in
-      float_option e1' e2f "tmp" builder
+      float_option e1' e2f "tmp" builder;
+    else raise (Failure "Binary operation error")
 
   and add_terminal builder instr =
     match L.block_terminator (L.insertion_block builder) with
@@ -119,7 +118,21 @@ let translate block_list =
         and e2' = build_expr var_map func_map builder e2 in
         match op with 
         (* syntax is val1, int option, float option, val2 *)
-        | A.Div -> float_converter e1' L.build_fdiv L.build_fdiv e2' builder
+        | A.Div -> (
+          if L.type_of e1' = float_t && L.type_of e2' = float_t then
+            L.build_fdiv e1' e2' "tmp" builder
+          else if L.type_of e1' = int_t && L.type_of e2' = int_t then
+            let e1f = L.build_sitofp e1' float_t "c1" builder in
+            let e2f = L.build_sitofp e2' float_t "c2" builder in
+            L.build_fdiv e1f e2f "tmp" builder
+          else if L.type_of e1' = int_t && L.type_of e2' = float_t then
+            let e1f = L.build_sitofp e1' float_t "c1" builder in
+            L.build_fdiv e1f e2' "tmp" builder;
+          else if L.type_of e1' = float_t && L.type_of e2' = int_t then
+            let e2f = L.build_sitofp e2' float_t "c2" builder in
+            L.build_fdiv e1' e2f "tmp" builder;
+          else raise (Failure "Division operation error")
+        )
         | A.Add -> float_converter e1' L.build_add L.build_fadd e2' builder
         | A.Sub -> float_converter e1' L.build_sub L.build_fsub e2' builder
         | A.Mult -> float_converter e1' L.build_mul L.build_fmul e2' builder
@@ -128,18 +141,18 @@ let translate block_list =
         | A.And -> L.build_and e1' e2' "tmp" builder
         | A.Or -> L.build_or e1' e2' "tmp" builder
         | A.Xor -> L.build_xor e1' e2' "tmp" builder
-        | A.Eq -> float_converter e1' (L.build_icmp L.Icmp.Eq) (L.build_fcmp L.Fcmp.Eq) e2' builder
-        | A.Neq -> float_converter e1' (L.build_icmp L.Icmp.Ne) (L.build_fcmp L.Fcmp.Ne) e2' builder
-        | A.Geq -> float_converter e1' (L.build_icmp L.Icmp.Sge) (L.build_fcmp L.Fcmp.Sge) e2' builder
-        | A.Leq -> float_converter e1' (L.build_icmp L.Icmp.Sle) (L.build_fcmp L.Fcmp.Sle) e2' builder
-        | A.Less -> float_converter e1' (L.build_icmp L.Icmp.Slt) (L.build_fcmp L.Fcmp.Slt) e2' builder
-        | A.More -> float_converter e1' (L.build_icmp L.Icmp.Sgt) (L.build_fcmp L.Fcmp.Sgt) e2' builder
+        | A.Eq -> float_converter e1' (L.build_icmp L.Icmp.Eq) (L.build_fcmp L.Fcmp.Oeq) e2' builder
+        | A.Neq -> float_converter e1' (L.build_icmp L.Icmp.Ne) (L.build_fcmp L.Fcmp.One) e2' builder
+        | A.Geq -> float_converter e1' (L.build_icmp L.Icmp.Sge) (L.build_fcmp L.Fcmp.Oge) e2' builder
+        | A.Leq -> float_converter e1' (L.build_icmp L.Icmp.Sle) (L.build_fcmp L.Fcmp.Ole) e2' builder
+        | A.Less -> float_converter e1' (L.build_icmp L.Icmp.Slt) (L.build_fcmp L.Fcmp.Olt) e2' builder
+        | A.More -> float_converter e1' (L.build_icmp L.Icmp.Sgt) (L.build_fcmp L.Fcmp.Ogt) e2' builder
         | A.LShift -> L.build_shl e1' e2' "tmp" builder
         | A.RShift -> L.build_lshr e1' e2' "tmp" builder
         | A.BitAnd -> L.build_and e1' e2' "tmp" builder
         | A.BitOr -> L.build_or e1' e2' "tmp" builder
         | A.BitXor -> L.build_xor e1' e2' "tmp" builder
-        | _ -> raise (Failure ("Binop error " ^ A.string_of_op c)))
+        | _ -> raise (Failure ("Binop error " ^ A.string_of_op op)))
         
     (* | SList l -> todo *)
     (* | SDict d ->  todo *)
@@ -266,15 +279,11 @@ let translate block_list =
         let result = string_of_svar svariable ^ "_result" in
         ignore (L.build_call func_ll (Array.of_list llargs) result builder);
         (var_map, func_map, builder)
-    (* | SFunctionSignature of sfunction_signature -> *)
     | SFunctionDefinition (sfunction_signature, block_list) ->
         let function_name, param_list, return_type = sfunction_signature in
         function_definition_helper
           (string_of_svar function_name)
           return_type param_list block_list var_map func_map block_map builder
-    (* | SInterfaceDefinition of svariable * sfunction_signature list -> *)
-    (* | SClassDefinition of svariable * sblock list -> *)
-    (* | SClassDefinitionImplements of svariable * svariable list * sblock list -> *)
     | SIfEnd (condition, block_list) ->
         let bool_val = build_expr var_map func_map builder condition in
         let then_bb = L.append_block context "then" cur_function in
