@@ -12,7 +12,7 @@ def fib(n: int) -> int:
     return fib(n - 1) + fib(n - 2)
 
 
-x :int = 0
+x : int = 0
 
 while (x < 10):
     print_int(fib(x))
