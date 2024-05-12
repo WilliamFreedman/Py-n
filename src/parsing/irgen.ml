@@ -27,6 +27,7 @@ let translate block_list =
     | A.TypeVariable "string" -> char_pt
     | _ -> raise (Failure " Not implemented yet")
   and
+
       (* Assigns an expression (rvalue's) llvalue to the variable's llvalue (w/ name var_name) *)
       (* Returns a builder! *)
       variable_assignment_helper var_map func_map var_name rvalue builder =
@@ -87,6 +88,21 @@ let translate block_list =
     in
 
     (var_map, final_func_map, original_builder)
+
+  and float_converter e1' int_option float_option e2' builder =
+    if L.type_of e1' = float_t && L.type_of e2' = float_t then
+      float_option e1' e2' "tmp" builder
+    else if L.type_of e1' = int_t && L.type_of e2' = int_t then
+      let e1f = L.build_sitofp e1' float_t "c1" builder in
+      let e2f = L.build_sitofp e2' float_t "c2" builder in
+    int_option e1f e2f "tmp" builder
+    else if L.type_of e1' = int_t then
+      let e1f = L.build_sitofp e1' float_t "c1" builder in
+      float_option e1f e2' "tmp" builder
+    else
+      let e2f = L.build_sitofp e2' float_t "c2" builder in
+      float_option e1' e2f "tmp" builder
+
   and add_terminal builder instr =
     match L.block_terminator (L.insertion_block builder) with
     | Some _ -> ()
@@ -99,51 +115,32 @@ let translate block_list =
     (* | SStringLit s -> TODO *)
     | SVarExpr (Var v) -> L.build_load (StringMap.find v var_map) v builder
     | SBinop (e1, op, e2) ->
-        let e1' = build_expr var_map func_map builder e1
+        (let e1' = build_expr var_map func_map builder e1
         and e2' = build_expr var_map func_map builder e2 in
-        if op <> A.Div then
-          (match op with
-          | A.Add -> L.build_add
-          | A.Sub -> L.build_sub
-          | A.Mult -> L.build_mul
-          | A.Div ->
-              if L.type_of e1' = float_t && L.type_of e2' = float_t then
-                L.build_fdiv
-              else if L.type_of e1' = int_t && L.type_of e2' = int_t then
-                L.build_sdiv
-              else raise (Failure " Not implemented yet") (* div_helper  *)
-          | A.FDiv -> raise (Failure " Not implemented yet")
-          (* fdiv_helper *)
-          (* | A.Exp -> I think we need to manually do this *)
-          | A.Mod -> L.build_srem
-          | A.And -> L.build_and
-          | A.Or -> L.build_or
-          | A.Xor -> L.build_xor
-          | A.Eq -> L.build_icmp L.Icmp.Eq
-          | A.Neq -> L.build_icmp L.Icmp.Ne
-          | A.Geq -> L.build_icmp L.Icmp.Sge
-          | A.Leq -> L.build_icmp L.Icmp.Sle
-          | A.Less -> L.build_icmp L.Icmp.Slt
-          | A.More -> L.build_icmp L.Icmp.Sgt
-          | A.LShift -> L.build_shl
-          | A.RShift -> L.build_ashr
-          | A.BitAnd -> L.build_and
-          | A.BitOr -> L.build_or
-          | A.BitXor -> L.build_xor
-          | _ as c -> raise (Failure ("Binop error " ^ A.string_of_op c)))
-            e1' e2' "tmp" builder
-        else if L.type_of e1' = float_t && L.type_of e2' = float_t then
-          L.build_fdiv e1' e2' "tmp" builder
-        else if L.type_of e1' = int_t && L.type_of e2' = int_t then
-          let e1f = L.build_sitofp e1' float_t "c1" builder in
-          let e2f = L.build_sitofp e2' float_t "c2" builder in
-          L.build_fdiv e1f e2f "tmp" builder
-        else if L.type_of e1' = int_t then
-          let e1f = L.build_sitofp e1' float_t "c1" builder in
-          L.build_fdiv e1f e2' "tmp" builder
-        else
-          let e2f = L.build_sitofp e2' float_t "c2" builder in
-          L.build_fdiv e1' e2f "tmp" builder
+        match op with 
+        (* syntax is val1, int option, float option, val2 *)
+        | A.Div -> float_converter e1' L.build_fdiv L.build_fdiv e2' builder
+        | A.Add -> float_converter e1' L.build_add L.build_fadd e2' builder
+        | A.Sub -> float_converter e1' L.build_sub L.build_fsub e2' builder
+        | A.Mult -> float_converter e1' L.build_mul L.build_fmul e2' builder
+        | A.FDiv -> float_converter e1' L.build_sdiv L.build_sdiv e2' builder
+        | A.Mod -> float_converter e1' L.build_srem L.build_frem e2' builder
+        | A.And -> L.build_and e1' e2' "tmp" builder
+        | A.Or -> L.build_or e1' e2' "tmp" builder
+        | A.Xor -> L.build_xor e1' e2' "tmp" builder
+        | A.Eq -> float_converter e1' (L.build_icmp L.Icmp.Eq) (L.build_fcmp L.Fcmp.Eq) e2' builder
+        | A.Neq -> float_converter e1' (L.build_icmp L.Icmp.Ne) (L.build_fcmp L.Fcmp.Ne) e2' builder
+        | A.Geq -> float_converter e1' (L.build_icmp L.Icmp.Sge) (L.build_fcmp L.Fcmp.Sge) e2' builder
+        | A.Leq -> float_converter e1' (L.build_icmp L.Icmp.Sle) (L.build_fcmp L.Fcmp.Sle) e2' builder
+        | A.Less -> float_converter e1' (L.build_icmp L.Icmp.Slt) (L.build_fcmp L.Fcmp.Slt) e2' builder
+        | A.More -> float_converter e1' (L.build_icmp L.Icmp.Sgt) (L.build_fcmp L.Fcmp.Sgt) e2' builder
+        | A.LShift -> L.build_shl e1' e2' "tmp" builder
+        | A.RShift -> L.build_lshr e1' e2' "tmp" builder
+        | A.BitAnd -> L.build_and e1' e2' "tmp" builder
+        | A.BitOr -> L.build_or e1' e2' "tmp" builder
+        | A.BitXor -> L.build_xor e1' e2' "tmp" builder
+        | _ -> raise (Failure ("Binop error " ^ A.string_of_op c)))
+        
     (* | SList l -> todo *)
     (* | SDict d ->  todo *)
     (* | SListCompUnconditional lc ->

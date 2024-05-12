@@ -227,10 +227,14 @@ and binop_return_type t1 op t2 =
       | TypeVariable "float", TypeVariable "int" -> TypeVariable "bool"
       | TypeVariable "int", TypeVariable "float" -> TypeVariable "bool"
       | _, _ -> raise (Failure "Invalid binop types"))
-  | Mod | LShift | RShift -> (
+  | Mod -> (
       match (t1, t2) with
       | TypeVariable "int", TypeVariable "int" -> TypeVariable "int"
       | TypeVariable "float", TypeVariable "int" -> TypeVariable "float"
+      | _, _ -> raise (Failure "Invalid binop types"))
+  | LShift | RShift -> (
+    match (t1, t2) with
+      | TypeVariable "int", TypeVariable "int" -> TypeVariable "int"
       | _, _ -> raise (Failure "Invalid binop types"))
   | And | Or | Xor -> (
       match (t1, t2) with
@@ -241,10 +245,21 @@ and binop_return_type t1 op t2 =
       | TypeVariable "int", TypeVariable "int" -> TypeVariable "int"
       | TypeVariable "float", TypeVariable "float" -> TypeVariable "float"
       | _, _ -> raise (Failure "Invalid binop types"))
-  | Iden | Mult | FDiv -> (
+  | Iden -> (
       match (t1, t2) with
       | t1, t2 when t1 = t2 -> t1
       | _, _ -> raise (Failure "Invalid binop types"))
+  | FDiv -> (
+    match (t1, t2) with
+    | TypeVariable "int", TypeVariable "int" -> TypeVariable "int"
+    | _, _ -> raise (Failure "Invalid binop types"))
+  | Mult -> (
+    match (t1, t2) with
+    | TypeVariable "int", TypeVariable "int" -> TypeVariable "int"
+    | TypeVariable "float", TypeVariable "float" -> TypeVariable "float"
+    | TypeVariable "float", TypeVariable "int" -> TypeVariable "float"
+    | TypeVariable "int", TypeVariable "float" -> TypeVariable "float"
+    | _, _ -> raise (Failure "Invalid binop types"))
   | Div -> (
       match (t1, t2) with
       | TypeVariable "int", TypeVariable "int" -> TypeVariable "float"
