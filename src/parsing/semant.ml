@@ -185,8 +185,10 @@ and binop_return_type t1 op t2=
     | (_, _) -> raise (Failure "Invalid binop types"))
   | Div -> 
     ( match (t1,t2) with
-    | (TypeVariable("int"), TypeVariable("int")) -> TypeVariable("int")
+    | (TypeVariable("int"), TypeVariable("int")) -> TypeVariable("float")
     | (TypeVariable("float"), TypeVariable("float")) -> TypeVariable("float")
+    | (TypeVariable("int"), TypeVariable("float")) -> TypeVariable("float")
+    | (TypeVariable("float"), TypeVariable("int")) -> TypeVariable("float")
     | (_,_) -> raise (Failure "Invalid binop types"))
   | Exp -> 
     ( match (t1, t2) with
@@ -322,14 +324,10 @@ and add_func_params_to_var_table var_table func_table arg_list = (match arg_list
   
 and check_block allowed_block_set var_table func_table func_return_type = function
   BlockAssign(v, s, e) -> (var_table, func_table, check_assign var_table func_table v s e)
-  | Break -> 
-    (match StringSet.find_opt "Break" allowed_block_set with
-    | Some _ -> (var_table, func_table, SBreak)
-    | None -> raise (Failure ("Break must be specified within a loop.")))
-  | Continue ->
-    (match StringSet.find_opt "Continue" allowed_block_set with
-    | Some _ -> (var_table, func_table, SContinue)
-    | None -> raise (Failure ("Continue must be specified within a loop.")))
+  | Break -> (try ignore(StringSet.find "Break" allowed_block_set); (var_table, func_table, SBreak)
+    with Not_found -> raise (Failure ("Break must be specified within a loop.")))
+  | Continue -> (try ignore(StringSet.find "Continue" allowed_block_set); (var_table, func_table, SContinue)
+    with Not_found -> raise (Failure ("Continue must be specified within a loop.")))
   | Pass ->
     (match StringSet.find_opt "Pass" allowed_block_set with
     | Some _ -> (var_table, func_table, SPass)
@@ -430,6 +428,21 @@ and check_block allowed_block_set var_table func_table func_return_type = functi
 
 
 
-and check block_list = let builtin_map = (StringMap.add "print_int" (TypeVariable("void"),[TypeVariable("int")]) StringMap.empty)  in
-  check_block_list StringSet.empty StringMap.empty builtin_map None block_list
+and check block_list =  let builtin_entries =
+  [
+    ("print_bool", (TypeVariable "void", [TypeVariable "bool"]));
+    ("print_float", (TypeVariable "void", [TypeVariable "float"]));
+    ("print_int", (TypeVariable "void", [TypeVariable "int"]));
+  ] 
+  in
+
+
+  let add_entry map (key, value) =
+    StringMap.add key value map 
+  
+  in
+  
+  let builtin_map =
+    List.fold_left add_entry StringMap.empty builtin_entries
+  in check_block_list StringSet.empty StringMap.empty builtin_map None block_list
 

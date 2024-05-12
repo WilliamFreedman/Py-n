@@ -53,6 +53,26 @@ let translate (block_list) =
     ignore(variable_assignment_helper new_var_map func_map var_name rvalue builder); new_var_map
 
   and
+
+  function_definition_helper function_name return_type param_list func_body var_map func_map builder block_map = 
+    let params_array = (Array.of_list (List.map (fun (_, t) -> ltype_of_typ t) param_list)) in
+    let new_function_type = L.function_type (ltype_of_typ return_type) params_array in
+
+    let new_function = L.declare_function function_name new_function_type the_module in
+    
+    (* Take function arguments and add them to the var map *)
+    (*TODO Do this*)
+    let new_var_map = var_map in (* List.fold_left (fun m (k, v) -> StringMap.add k (ltype_of_typ v) m) var_map param_list in *)
+
+    (* Add function to function map so that we can also call it recursively *)
+    let new_func_map = StringMap.add function_name new_function func_map in
+
+    (* Take function arguments and actually do stuff with them, go block by block in the func body*)
+    let (final_var_map, final_func_map, new_builder) = build_block_list new_var_map new_func_map builder new_function block_map func_body in
+
+    (final_var_map, final_func_map, new_builder)
+    
+  and
   
   (*
   let function_definition_helper = function_name return_type param_list func_body map builder context module_name =
@@ -156,10 +176,7 @@ let translate (block_list) =
     
   
   and *)
-
-
   
-
   add_terminal builder instr =
     match L.block_terminator (L.insertion_block builder) with
       Some _ -> ()
@@ -216,9 +233,14 @@ let translate (block_list) =
           else if (L.type_of e1' = int_t && L.type_of e2' = int_t) then
             let e1f = L.build_sitofp e1' float_t "c1" builder in
             let e2f = L.build_sitofp e2' float_t "c2" builder in
-            raise (Failure (" divi Not implemented yet"))
+            L.build_fdiv e1f e2f "tmp" builder
+          else if (L.type_of e1' = int_t) then
+            let e1f = L.build_sitofp e1' float_t "c1" builder in
+            L.build_fdiv e1f e2' "tmp" builder
           else
-            raise (Failure (" divi2 Not implemented yet"))
+            let e2f = L.build_sitofp e2' float_t "c2" builder in
+            L.build_fdiv e1' e2f "tmp" builder
+            
     (* | SList l -> todo *)
     (* | SDict d ->  todo *)
     (* | SListCompUnconditional lc ->  
@@ -231,20 +253,26 @@ let translate (block_list) =
       raise (Failure ("Not implemented yet"))
     (* | SIndexingExprList *)
     | SIndexingStringLit(e1, e2) -> raise (Failure (" Not implemented yet"))
+    | _ -> raise (Failure (" Not implemented yet"))
+    
     and 
 
   (* Takes in a var_map, func_map, builder, and block and returns new var_map, func_map builder *)
   (* var_map is a mapping from variable names (strings) to their corresponding llvalues *)
   (* func_map is a mapping from function names (strings) to their corresponding llvalues *)
-  build_block var_map func_map builder cur_function = function
+  (* block_map is a mapping from special block type (SContinue, SBreak, conditional statements) to llbasicblock *)
+  (* in the case of elif / else statements, block_map maps 'if_end' to llbasicblock for the end of the original if *)
+  build_block var_map func_map builder cur_function block_map = function
     SBlockAssign(Var(var_name), s_assign, s_expr) ->
       (* Evaluate the expression and store it in the variable *)
       (* raise (Failure("in sblock assign")) *)
       (var_map, func_map, (variable_assignment_helper var_map func_map var_name s_expr builder))
 
-    | SBreak -> raise (Failure (" Not implemented yet"))
-    | SContinue -> raise (Failure (" Not implemented yet"))
-    | SPass -> raise (Failure (" Not implemented yet"))
+    | SBreak -> (try let block = StringMap.find "break" block_map in ignore(L.build_br block builder); (var_map, func_map, builder)
+      with Not_found -> raise (Failure ("Break cannot be placed outside of a loop")))
+    | SContinue -> (try let block = StringMap.find "continue" block_map in ignore(L.build_br block builder); (var_map, func_map, builder)
+      with Not_found -> raise (Failure ("Continue cannot be placed outside of a loop")))
+    | SPass -> (var_map, func_map, builder)
 
     | SVarDec (typ, Var(var_name), s_expr) -> 
       (* Declare the variable, evaluate the expression and store it in the variable *)
@@ -252,88 +280,143 @@ let translate (block_list) =
       let new_var_map = variable_declaration_helper var_map func_map typ var_name s_expr builder in
       (new_var_map, func_map, builder)
 
-    | SReturnVal(sexpr) -> raise (Failure (" Not implemented yet"))
-    | SReturnVoid -> raise (Failure (" Not implemented yet"))
+    | SReturnVal(sexpr) -> let ret_value = build_expr var_map func_map builder sexpr in ignore(L.build_ret ret_value builder); (var_map, func_map, builder)
+    | SReturnVoid -> ignore(L.build_ret_void builder); (var_map, func_map, builder)
     | SWhile(condition, block_list) -> 
-      raise (Failure (" Not implemented yet"))
-      (* let while_bb = L.append_block context "while" cur_function in 
+      (* raise (Failure (" Not implemented yet")) *)
+      let while_bb = L.append_block context "while" cur_function in 
       let build_br_while = L.build_br while_bb in
       ignore (build_br_while builder);
       let while_builder = L.builder_at_end context while_bb in
       let bool_val = build_expr var_map func_map while_builder condition in
       
       let body_bb = L.append_block context "while_body" cur_function in
-      add_terminal (build_block_list var_map func_map (L.builder_at_end context body_bb) cur_function block_list) build_br_while;
+      (* add_terminal (build_block_list var_map func_map (L.builder_at_end context body_bb) cur_function block_list) build_br_while; *)
       
       let end_bb = L.append_block context "while_end" cur_function in
+      let new_block_map = StringMap.add "break" end_bb (StringMap.add "continue" while_bb block_map) in
+      let (_, _, new_builder) = (build_block_list var_map func_map (L.builder_at_end context body_bb) cur_function new_block_map block_list) in
+      add_terminal new_builder build_br_while;
       
       ignore(L.build_cond_br bool_val body_bb end_bb while_builder);
-      (var_map, func_map, L.builder_at_end context end_bb) *)
+      (var_map, func_map, L.builder_at_end context end_bb)
     | SFor(svariable, sexpr, block_list) -> raise (Failure (" Not implemented yet"))
     | SFuncBlockCall (Var("print_int"), args) -> ignore(L.build_call printf_func [| (L.build_global_stringptr "%d\n" "fmt" builder) ; (build_expr var_map func_map builder (List.hd args)) |]
       "print_int" builder); (var_map, func_map, builder)
-    | SFuncBlockCall(svariable, args) -> raise (Failure (" googoo ahaha"))
+    | SFuncBlockCall (Var("print_float"), args) -> ignore(L.build_call printf_func [| (L.build_global_stringptr "%f\n" "fmt" builder) ; (build_expr var_map func_map builder (List.hd args)) |]
+      "print_float" builder); (var_map, func_map, builder)
+    | SFuncBlockCall (Var("print_bool"), args) -> ignore(L.build_call printf_func [| (L.build_global_stringptr "%d\n" "fmt" builder) ; (build_expr var_map func_map builder (List.hd args)) |]
+      "print_bool" builder); (var_map, func_map, builder)
+    | SFuncBlockCall(svariable, args) -> raise (Failure ("func block call not implemented yet in irgen"))
     (* | SFunctionSignature of sfunction_signature -> *)
-    | SFunctionDefinition (sfunction_signature, block_list) -> raise (Failure (" Not implemented yet"))
+    | SFunctionDefinition (sfunction_signature, block_list) -> 
+      raise (Failure (" Not implemented yet"))
+
     (* | SInterfaceDefinition of svariable * sfunction_signature list -> *)
     (* | SClassDefinition of svariable * sblock list -> *)
     (* | SClassDefinitionImplements of svariable * svariable list * sblock list -> *)
-    | SIfEnd(condition, block_list) | SElifEnd(condition, block_list)->
+    | SIfEnd(condition, block_list) ->
+    let bool_val = build_expr var_map func_map builder condition in
+    let then_bb = L.append_block context "then" cur_function in
+    ignore (build_block_list var_map func_map (L.builder_at_end context then_bb) cur_function block_map block_list);
+
+    (* label for if we don't hit the condition, now we go to the original builder and add in the conditional branch *)
+    let next_else_bb = L.append_block context "next_else" cur_function in
+    ignore(L.build_cond_br bool_val then_bb next_else_bb builder);
+
+    (* now we jump to next_else at the end of the then_bb! (this is where the stuff after the if will start) *)
+    ignore(L.build_br next_else_bb (L.builder_at_end context then_bb));
+    
+    (* no block map changes because IfEnd *)
+    (* we return the builder at the end of the context of this next_else label *)
+    (var_map, func_map, L.builder_at_end context next_else_bb)
+
+    | SElifEnd(condition, block_list) ->
+      let jump_block = (try StringMap.find "if_end" block_map 
+      with Not_found -> raise (Failure ("No if_end to match elif_end to: SHOULDN'T HAPPEN!"))) in
       let bool_val = build_expr var_map func_map builder condition in
       let then_bb = L.append_block context "then" cur_function in
-      ignore (build_block_list var_map func_map (L.builder_at_end context then_bb) cur_function block_list);
+      ignore (build_block_list var_map func_map (L.builder_at_end context then_bb) cur_function block_map block_list);
 
-      let end_bb = L.append_block context "if_end" cur_function in
-      let build_br_end = L.build_br end_bb in (* partial function *)
-      add_terminal (L.builder_at_end context then_bb) build_br_end;
+      (* have to jump to the jump_block here, since the condition was true and we executed the statements here *)
+      ignore (L.build_br jump_block (L.builder_at_end context then_bb));
       
-      ignore(L.build_cond_br bool_val then_bb end_bb builder);
-      (var_map, func_map, L.builder_at_end context end_bb)
+      (* label for the case where the elif isn't true, now we go to the original builder and add in the conditional branch *)
+      let next_else_bb = L.append_block context "next_else" cur_function in
+      ignore(L.build_cond_br bool_val then_bb next_else_bb builder);
+
+      (* the next_else_bb just has a jump to the jump_block though! *)
+      ignore (L.build_br jump_block (L.builder_at_end context next_else_bb));
+      
+      (* Does it really matter what gets returned here? We stack up into a previous if / elif after all... *)
+      (var_map, func_map, builder)
+
     | SIfNonEnd(condition, block_list, else_block) ->
-      (*
       let bool_val = build_expr var_map func_map builder condition in
       let then_bb = L.append_block context "then" cur_function in
-      ignore (build_block_list var_map func_map (L.builder_at_end context then_bb) cur_function block_list);
-      (* have to jump to if_end here, since the condition was true and we executed the statements here*)
-      (* we haven't created the if_end yet (this is the first if), so we create it now and pass it on maybe? *)
-      (* the idea is that future elifs need to jump to this if_end if they are successful *)
-      let if_end_bb = L.append_block context "if_end"  cur_function in
-      *) raise (Failure("conditional"))
+      ignore (build_block_list var_map func_map (L.builder_at_end context then_bb) cur_function block_map block_list);
+
+      (* have to jump to if_end from then_bb, since the condition was true and we executed the statements here *)
+      (* but we haven't created the if_end yet (this is the first if), so we create it now and pass it on in the else_block eval *)
+      (* the idea is that future elifs (if successful) & the else should be able to jump to this if_end *)
+
+      let if_end_bb = L.append_block context "if_end" cur_function in
+      ignore (L.build_br if_end_bb (L.builder_at_end context then_bb));
+      
+      (* label for future elifs / else, now we go to the original builder and add in the conditional branch *)
+      let next_else_bb = L.append_block context "next_else" cur_function in
+      ignore(L.build_cond_br bool_val then_bb next_else_bb builder);
+
+      (* we build the subsequent block at the correct place (the next_else of the if), also passing in the if_end_bb
+      into the block map *)
+      let new_block_map = StringMap.add "if_end" if_end_bb block_map in
+      ignore(build_block var_map func_map (L.builder_at_end context next_else_bb) cur_function new_block_map else_block);
+      (var_map, func_map, L.builder_at_end context if_end_bb)
+      
     | SElifNonEnd(condition, block_list, else_block) ->
+      let jump_block = (try StringMap.find "if_end" block_map
+      with Not_found -> raise (Failure ("No if_end to match elif_non_end to: SHOULDN'T HAPPEN!"))) in
       let bool_val = build_expr var_map func_map builder condition in
       let then_bb = L.append_block context "then" cur_function in
+      ignore (build_block_list var_map func_map (L.builder_at_end context then_bb) cur_function block_map block_list);
 
-      ignore (build_block_list var_map func_map (L.builder_at_end context then_bb) cur_function block_list);
-      (* have to jump to if_end here, since the condition was true and we executed the statements here *)
-        
-      (* the else_bb is the label for the next type of instruction *)
-      (* if we are*)
-      let else_bb = L.append_block context "else" cur_function in
-      ignore(build_block var_map func_map (L.builder_at_end context else_bb) cur_function else_block);
-      ignore(L.build_cond_br bool_val then_bb else_bb builder);
+      (* have to jump to the jump_block here, since the condition was true and we executed the statements here *)
+      ignore (L.build_br jump_block (L.builder_at_end context then_bb));
+      
+      (* label for future elifs / else, now we go to the original builder and add in the conditional branch *) 
+      let next_else_bb = L.append_block context "next_else" cur_function in
+      ignore(L.build_cond_br bool_val then_bb next_else_bb builder);
 
-      (var_map, func_map,  builder)
+      (* we build the subsequent block at the correct place (the next_else of the elif) *)
+      ignore(build_block var_map func_map (L.builder_at_end context next_else_bb) cur_function block_map else_block);
+      
+      (* Does it really matter what gets returned here? We stack up into a previous if / elif after all... *)
+      (var_map, func_map, builder)
+
     | SElseEnd(block_list) ->
-      (* No blocks, our builder is at the end of the block of the previous if *)
-      let then_bb = L.append_block context "then" cur_function in
-      ignore (build_block_list var_map func_map (L.builder_at_end context then_bb) cur_function block_list);
-      let end_bb = L.append_block context "if_end" cur_function in
+      let jump_block = (try StringMap.find "if_end" block_map 
+      with Not_found -> raise (Failure ("No if_end to match else to: SHOULDN'T HAPPEN!"))) in
+      (* build the blocks; we're at the right place *)
+      ignore (build_block_list var_map func_map builder cur_function block_map block_list);
 
-      let build_br_end = L.build_br end_bb in (* partial function *)
-      ignore (add_terminal (L.builder_at_end context then_bb) build_br_end);
-      (var_map, func_map, (L.builder_at_end context end_bb))
+      (* then jump to the jump_block *)
+      ignore (L.build_br jump_block builder);
+
+      (* Does it really matter what gets returned here? We stack up into a previous if / elif after all... *)
+      (var_map, func_map, builder)
 
   and
 
-  build_block_list var_table func_table builder cur_function = function 
-    | [] -> builder
-    | x :: xs -> let (new_var_table, new_func_table, new_builder) = build_block var_table func_table builder cur_function x in build_block_list new_var_table new_func_table new_builder cur_function xs
+  build_block_list var_table func_table builder cur_function block_map = function 
+    | [] -> (var_table, func_table, builder)
+    | x :: xs -> let (new_var_table, new_func_table, new_builder) = build_block var_table func_table builder cur_function block_map x in 
+    build_block_list new_var_table new_func_table new_builder cur_function block_map xs
     in 
   
   (* Create a "main" function that all code will be inside *)
   let prog_func = L.define_function "main" (L.function_type (L.void_type context) [||]) the_module in
   let builder = L.builder_at_end context (L.entry_block prog_func) in
 
-  let new_builder = build_block_list StringMap.empty StringMap.empty builder prog_func block_list in
-  L.build_ret_void new_builder;
+  let (var_table, func_table, new_builder) = build_block_list StringMap.empty StringMap.empty builder prog_func StringMap.empty block_list in
+  ignore(L.build_ret_void new_builder);
   the_module

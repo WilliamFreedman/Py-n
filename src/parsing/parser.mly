@@ -45,8 +45,10 @@ program_rule:
     block_list EOF { { body = $1 } }
 
 block_list:
-	/* nothing */                       { []        }
+    // /* nothing */ {[]}
+    block newline_list {[$1]}
 	| block newline_list block_list     { $1 :: $3  }  
+      //  block newline_list                  { [] }
 
 newline_list:
 	NEWLINE {}

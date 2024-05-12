@@ -1,6 +1,9 @@
-x: int = 3
-if x > 0:
+x: int = -1
+y: bool = True
+if x > 0 and y:
     print_int(x)
+elif x == -1:
+    print_int(100)
 else:
     x = 4
     print_int(x)

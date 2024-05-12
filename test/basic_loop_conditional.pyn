@@ -1,0 +1,6 @@
+x: int = 0
+while x < 100:
+    if x % 2 == 0:
+        print_int(x)
+    
+    x += 1

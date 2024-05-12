@@ -1,3 +1,10 @@
-x: bool = True 
-y: bool = False 
-z: bool = (x == y)
+x: bool = True
+y: bool = False
+z: bool = (x==y)
+a:bool = x and y
+b:bool = x and x
+c:bool = y and y
+
+
+
+print_bool(z)

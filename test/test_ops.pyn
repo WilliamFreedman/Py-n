@@ -8,4 +8,9 @@ print_int(x + y)
 print_int(x - y)
 print_int(x * y)
 print_int(x % y)
-z:float = a/b
+z:float = a/x
+
+print_float(x/y)
+print_float(x/a)
+print_float(a/b)
+print_float(a/x)
