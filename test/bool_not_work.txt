@@ -1,0 +1,2 @@
+Fatal error: exception Failure("Type mismatch, LHS: bool RHS: int")
+lli: Symbols not found: [ _main ]

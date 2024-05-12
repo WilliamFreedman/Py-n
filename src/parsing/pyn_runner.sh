@@ -19,5 +19,5 @@ ocamlbuild -r -pkgs llvm pyn.native
 
 cat $modified_filename | ./pyn.native -l > $modified_filename.ll
 lli $modified_filename.ll
-rm $modified_filename.ll
-rm pyn.native
+# rm $modified_filename.ll
+# rm pyn.native

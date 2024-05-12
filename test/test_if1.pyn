@@ -1,6 +1,8 @@
-def check_pass(int grade):
+def check_pass(grade: int) -> int:
     if (grade >= 50):
-        return "Pass"
-    else:
-        return "Fail"
-print(check_pass(55))
+        return 1
+    
+    return 0
+
+
+print_int(check_pass(55))

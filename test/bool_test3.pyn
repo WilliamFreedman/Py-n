@@ -1,1 +1,3 @@
-z: bool = 5
+z: bool = True
+x: bool = False
+print_bool (z)

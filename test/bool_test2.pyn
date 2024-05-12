@@ -5,6 +5,4 @@ a:bool = x and y
 b:bool = x and x
 c:bool = y and y
 
-
-
 print_bool(z)

@@ -1,7 +1,8 @@
-def rec(int n):
+def rec(n: int) -> int:
     if n <= 3:
         return n
-    else:
-        return rec(n-1) + rec(n-2)
+    
+    return rec(n - 1) + rec(n - 2)
+
 x: int = 3
-print(rec(3))
+print_int(rec(3))

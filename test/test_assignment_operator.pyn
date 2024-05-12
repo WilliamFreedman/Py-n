@@ -1,0 +1,12 @@
+x:int = 3
+x += 3
+y:int = 5
+y -= y
+z : int = 2
+z *= 3
+a:int = 6
+a /= 3
+print_int(x)
+print_int(y)
+print_int(z)
+print_int(a)
