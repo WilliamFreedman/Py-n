@@ -84,9 +84,9 @@ rule tokenize = parse
 | "DEDENT" { DEDENT }
 | "True"  { BOOLLIT(true) }
 | "False" { BOOLLIT(false) }
-| ['+' '-']? ('0'|(['1'-'9'] digits*))? '.' digits* (['e' 'E'] ['+' '-']? digits+)? as lit { FLOATLIT(float_of_string lit) }
-| ['+' '-']? ('0'|(['1'-'9'] digits*)) ['e' 'E'] ['+' '-']? digits+ as lit { FLOATLIT(float_of_string lit) }
-| ['+' '-']? ('0'|['1'-'9'] digits*) as lit { INTLIT(int_of_string lit) }
+| ['-']? ('0'|(['1'-'9'] digits*))? '.' digits* (['e' 'E'] ['+' '-']? digits+)? as lit { FLOATLIT(float_of_string lit) }
+| ['-']? ('0'|(['1'-'9'] digits*)) ['e' 'E'] ['+' '-']? digits+ as lit { FLOATLIT(float_of_string lit) }
+| ['-']? ('0'|['1'-'9'] digits*) as lit { INTLIT(int_of_string lit) }
 | '\"'alphabet*'\"' as lit { STRINGLIT(lit) }
 | '\''alphabet*'\'' as lit { STRINGLIT(lit) }
 | ['a'-'z''A'-'Z''_']+['a'-'z''A'-'Z''_' '0'-'9']* as id { VARIABLE(id) }

@@ -17,6 +17,8 @@ let process_line define_map current_indent line line_num =
   let line = List.fold_left replace_x_with_y line define_map in
   (indent_change, updated_indent, line)
 
+  (* if a line is blank (i.e. nothing more than spaces), then we should avoid tracking indent changes *)
+
   let process_line define_map current_indent line line_num =
     let indent_diff = String.length line - String.length (String.trim line) in
     let indent_change = 

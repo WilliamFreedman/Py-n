@@ -54,15 +54,23 @@ let translate (block_list) =
 
   and
 
-  function_definition_helper function_name return_type param_list func_body var_map func_map builder block_map = 
+  function_definition_helper function_name return_type param_list func_body var_map func_map block_map original_builder = 
     let params_array = (Array.of_list (List.map (fun (_, t) -> ltype_of_typ t) param_list)) in
     let new_function_type = L.function_type (ltype_of_typ return_type) params_array in
 
-    let new_function = L.declare_function function_name new_function_type the_module in
+    let new_function = L.define_function function_name new_function_type the_module in
+    let builder = L.builder_at_end context (L.entry_block new_function) in
     
     (* Take function arguments and add them to the var map *)
-    (*TODO Do this*)
-    let new_var_map = var_map in (* List.fold_left (fun m (k, v) -> StringMap.add k (ltype_of_typ v) m) var_map param_list in *)
+    let add_args map (var, sast_type) value =
+      let name = string_of_svar var in
+      L.set_value_name name value;
+      let local = L.build_alloca (ltype_of_typ sast_type) name builder in
+      ignore (L.build_store value local builder);
+      StringMap.add name local map
+    in
+    (* Add function arg names -> their llvalues to the var_map, getting new_var_map *)
+    let new_var_map = List.fold_left2 add_args var_map param_list (Array.to_list (L.params new_function)) in 
 
     (* Add function to function map so that we can also call it recursively *)
     let new_func_map = StringMap.add function_name new_function func_map in
@@ -70,7 +78,7 @@ let translate (block_list) =
     (* Take function arguments and actually do stuff with them, go block by block in the func body*)
     let (final_var_map, final_func_map, new_builder) = build_block_list new_var_map new_func_map builder new_function block_map func_body in
 
-    (final_var_map, final_func_map, new_builder)
+    (var_map, final_func_map, original_builder)
     
   and
   
@@ -248,9 +256,14 @@ let translate (block_list) =
     | SDictCompUnconditional dc -> 
     | SDictCompConditional dc ->  *)
     | SWalrus(var, expr) -> raise (Failure (" Walrus Not implemented yet"))
-    | SFuncCall (var, expr) -> 
+    | SFuncCall (svariable, args) -> 
       (* let (fdef, fast) = StringMap.find *)
-      raise (Failure ("Not implemented yet"))
+      let func_ll = StringMap.find (string_of_svar svariable) func_map in
+      let llargs = List.rev (List.map (build_expr var_map func_map builder) (List.rev args)) in
+      let result = (string_of_svar svariable) ^ "_result" in
+      L.build_call func_ll (Array.of_list llargs) result builder;
+
+
     (* | SIndexingExprList *)
     | SIndexingStringLit(e1, e2) -> raise (Failure (" Not implemented yet"))
     | _ -> raise (Failure (" Not implemented yet"))
@@ -280,7 +293,10 @@ let translate (block_list) =
       let new_var_map = variable_declaration_helper var_map func_map typ var_name s_expr builder in
       (new_var_map, func_map, builder)
 
-    | SReturnVal(sexpr) -> let ret_value = build_expr var_map func_map builder sexpr in ignore(L.build_ret ret_value builder); (var_map, func_map, builder)
+    | SReturnVal(sexpr) -> 
+      let ret_value = build_expr var_map func_map builder sexpr in 
+      ignore(L.build_ret ret_value builder); 
+      (var_map, func_map, builder)
     | SReturnVoid -> ignore(L.build_ret_void builder); (var_map, func_map, builder)
     | SWhile(condition, block_list) -> 
       (* raise (Failure (" Not implemented yet")) *)
@@ -307,11 +323,17 @@ let translate (block_list) =
       "print_float" builder); (var_map, func_map, builder)
     | SFuncBlockCall (Var("print_bool"), args) -> ignore(L.build_call printf_func [| (L.build_global_stringptr "%d\n" "fmt" builder) ; (build_expr var_map func_map builder (List.hd args)) |]
       "print_bool" builder); (var_map, func_map, builder)
-    | SFuncBlockCall(svariable, args) -> raise (Failure ("func block call not implemented yet in irgen"))
+    | SFuncBlockCall(svariable, args) -> 
+      let func_ll = StringMap.find (string_of_svar svariable) func_map in
+      let llargs = List.rev (List.map (build_expr var_map func_map builder) (List.rev args)) in
+      let result = (string_of_svar svariable) ^ "_result" in
+      ignore(L.build_call func_ll (Array.of_list llargs) result builder);
+      (var_map, func_map, builder)
+      
     (* | SFunctionSignature of sfunction_signature -> *)
     | SFunctionDefinition (sfunction_signature, block_list) -> 
-      raise (Failure (" Not implemented yet"))
-
+      let (function_name, param_list, return_type) = sfunction_signature in
+      function_definition_helper (string_of_svar function_name) return_type param_list block_list var_map func_map block_map builder
     (* | SInterfaceDefinition of svariable * sfunction_signature list -> *)
     (* | SClassDefinition of svariable * sblock list -> *)
     (* | SClassDefinitionImplements of svariable * svariable list * sblock list -> *)

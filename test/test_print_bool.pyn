@@ -1,0 +1,3 @@
+x : bool = True
+
+print_bool(x)

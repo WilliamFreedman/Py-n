@@ -314,7 +314,7 @@ and
 (* Return list of sblocks given blocks *)
 check_block_list allowed_block_set var_table func_table func_return_type = function
   | [] -> []
-  | x :: xs -> let (v_t, f_t, sblock) = check_block allowed_block_set var_table func_table func_return_type x in sblock :: check_block_list StringSet.empty v_t f_t None xs
+  | x :: xs -> let (v_t, f_t, new_block_set, new_func_return_type, sblock) = check_block allowed_block_set var_table func_table func_return_type x in sblock :: check_block_list new_block_set v_t f_t new_func_return_type xs
 
 (* It returns a tuple of the var_table * func_table * Sast block *)
 and add_func_params_to_var_table var_table func_table arg_list = (match arg_list with
@@ -323,15 +323,16 @@ and add_func_params_to_var_table var_table func_table arg_list = (match arg_list
   
   
 and check_block allowed_block_set var_table func_table func_return_type = function
-  BlockAssign(v, s, e) -> (var_table, func_table, check_assign var_table func_table v s e)
-  | Break -> (try ignore(StringSet.find "Break" allowed_block_set); (var_table, func_table, SBreak)
-    with Not_found -> raise (Failure ("Break must be specified within a loop.")))
-  | Continue -> (try ignore(StringSet.find "Continue" allowed_block_set); (var_table, func_table, SContinue)
-    with Not_found -> raise (Failure ("Continue must be specified within a loop.")))
-  | Pass ->
-    (match StringSet.find_opt "Pass" allowed_block_set with
-    | Some _ -> (var_table, func_table, SPass)
-    | None -> raise (Failure ("Pass must be specified within a function / loop / conditional.")))
+  BlockAssign(v, s, e) -> (var_table, func_table, allowed_block_set, func_return_type, check_assign var_table func_table v s e)
+  | Break -> 
+    (match StringSet.find_opt "Break" allowed_block_set with
+    | Some _ -> (var_table, func_table, allowed_block_set, func_return_type, SBreak)
+    | None -> raise (Failure ("Break must be specified within a loop.")))
+  | Continue ->     
+    (match StringSet.find_opt "Continue" allowed_block_set with
+  | Some _ -> (var_table, func_table, allowed_block_set, func_return_type, SContinue)
+  | None -> raise (Failure ("Continue must be specified within a loop.")))
+  | Pass -> (var_table, func_table, allowed_block_set, func_return_type, SPass)
   | ReturnVal(expr) -> 
     if (func_return_type = None) then raise (Failure ("Return must be specified within a function.")) else
     (match StringSet.find_opt "ReturnVal" allowed_block_set with
@@ -341,14 +342,14 @@ and check_block allowed_block_set var_table func_table func_return_type = functi
       (match func_return_type with 
       | None -> raise (Failure "ReturnVal statement not in a function")
       | Some func_return_type ->
-        if t = func_return_type then (var_table, func_table, SReturnVal(t, e))
+        if t = func_return_type then (var_table, func_table, allowed_block_set, Some(func_return_type), SReturnVal(t, e))
         else raise (Failure ("Expected return type " ^ (string_of_typevar func_return_type) ^ " got " ^ (string_of_typevar t))))))
   | ReturnVoid -> 
     if (func_return_type = None) then raise (Failure ("Return must be specified within a function.")) else
     (match StringSet.find_opt "ReturnVoid" allowed_block_set with
     | None -> raise (Failure ("Return statement not in a function."))
     | Some _ -> 
-      if func_return_type = Some(TypeVariable("void")) then (var_table, func_table, SReturnVoid)
+      if func_return_type = Some(TypeVariable("void")) then (var_table, func_table, allowed_block_set, func_return_type, SReturnVoid)
       else raise (Failure ("Expected no return expression in a void function")))
   | VarDec(typ, var, expr) -> 
     let (t, e) = check_expr var_table func_table expr in
@@ -356,7 +357,7 @@ and check_block allowed_block_set var_table func_table func_return_type = functi
     let new_var_table = variable_declaration_helper var_table func_table var typ in
     let rvalue_sexpr = check_expr var_table func_table expr in
     let var_dec_to_return = SVarDec(typ, var, rvalue_sexpr) in 
-    (new_var_table, func_table, var_dec_to_return)
+    (new_var_table, func_table, allowed_block_set, func_return_type, var_dec_to_return)
     ) else raise (Failure ("Type mismatch, LHS: " ^ string_of_typevar typ ^ " RHS: " ^ string_of_typevar t))
 
   | While(loop_expr, loop_block_list) -> 
@@ -365,9 +366,9 @@ and check_block allowed_block_set var_table func_table func_return_type = functi
       let loop_sexpr = check_expr var_table func_table loop_expr in
       (match loop_sexpr with
       | (TypeVariable("bool"), loop_sx) ->
-      let new_allowed_block_set = StringSet.add "Break" (StringSet.add "Continue" (StringSet.add "Pass" allowed_block_set)) in 
+      let new_allowed_block_set = StringSet.add "Break" (StringSet.add "Continue" allowed_block_set) in 
       let sblock_list = check_block_list new_allowed_block_set var_table func_table func_return_type loop_block_list in
-      (var_table, func_table, SWhile(loop_sexpr, sblock_list))
+      (var_table, func_table, allowed_block_set, func_return_type, SWhile(loop_sexpr, sblock_list))
       | _ -> raise (Failure ((string_of_expr loop_expr) ^ "is not of type bool.")))
 
   | For(loop_var, loop_expr, loop_block_list) -> 
@@ -377,49 +378,49 @@ and check_block allowed_block_set var_table func_table func_return_type = functi
     (match loop_sexpr with 
       | (List(sub_type), loop_sx) ->
       let new_var_table = StringMap.add (string_of_var loop_var) sub_type var_table in
-      let new_allowed_block_set = StringSet.add "Break" (StringSet.add "Continue" (StringSet.add "Pass" allowed_block_set)) in
+      let new_allowed_block_set = StringSet.add "Break" (StringSet.add "Continue" allowed_block_set) in
       let sblock_list = check_block_list new_allowed_block_set new_var_table func_table func_return_type loop_block_list in
-      (var_table, func_table, SFor(loop_var, loop_sexpr, sblock_list))
+      (var_table, func_table, allowed_block_set, func_return_type, SFor(loop_var, loop_sexpr, sblock_list))
       | _ -> raise (Failure ((string_of_expr loop_expr) ^ " is not a list type."))) 
   | FuncBlockCall(fname, args) -> 
     let (_, func_name, sexpr_list) = check_func_call var_table func_table fname args in
-    (var_table, func_table, SFuncBlockCall(func_name, sexpr_list))
+    (var_table, func_table, allowed_block_set, func_return_type, SFuncBlockCall(func_name, sexpr_list))
   (* | FunctionSignature *) 
   | FunctionDefinition(func_sig, block_list) -> 
     let (variable, arg_list, return_type) = func_sig in
     let new_func_table = function_declaration_helper var_table func_table variable return_type arg_list in
     let new_var_table = add_func_params_to_var_table var_table func_table arg_list in 
     let new_allowed_block_set = 
-      StringSet.add "Pass" (if return_type = TypeVariable("void") then StringSet.add "ReturnVoid" allowed_block_set
+      (if return_type = TypeVariable("void") then StringSet.add "ReturnVoid" allowed_block_set
       else StringSet.add "ReturnVal" allowed_block_set) in
     let sblock_list = check_block_list new_allowed_block_set new_var_table new_func_table (Some(return_type)) block_list in
-    (var_table, new_func_table, SFunctionDefinition(func_sig, sblock_list))
+    (var_table, new_func_table, allowed_block_set, func_return_type, SFunctionDefinition(func_sig, sblock_list))
     
   | IfEnd(expr, block_list) -> 
     let sexpr = check_expr var_table func_table expr in
     let sblock_list = check_block_list allowed_block_set var_table func_table func_return_type block_list in
-    (var_table, func_table,  SIfEnd(sexpr, sblock_list))
+    (var_table, func_table, allowed_block_set, func_return_type, SIfEnd(sexpr, sblock_list))
 
   | IfNonEnd(expr, block_list, block) ->
     let sexpr = check_expr var_table func_table expr in
     let sblock_list = check_block_list allowed_block_set var_table func_table func_return_type block_list in
-    let (_, _, sblock) = check_block allowed_block_set var_table func_table func_return_type block in
-    (var_table, func_table, SIfNonEnd(sexpr, sblock_list, sblock))
+    let (_, _, _, _, sblock) = check_block allowed_block_set var_table func_table func_return_type block in
+    (var_table, func_table, allowed_block_set, func_return_type, SIfNonEnd(sexpr, sblock_list, sblock))
 
   | ElifEnd(expr, block_list) -> 
     let sexpr = check_expr var_table func_table expr in
     let sblock_list = check_block_list allowed_block_set var_table func_table func_return_type block_list in
-    (var_table, func_table, SElifEnd(sexpr, sblock_list))
+    (var_table, func_table, allowed_block_set, func_return_type, SElifEnd(sexpr, sblock_list))
 
   | ElifNonEnd(expr, block_list, block) ->
     let sexpr = check_expr var_table func_table expr in
     let sblock_list = check_block_list allowed_block_set var_table func_table func_return_type block_list in
-    let (_, _, sblock) = check_block allowed_block_set var_table func_table func_return_type block in
-    (var_table, func_table, SElifNonEnd(sexpr, sblock_list, sblock))
+    let (_, _, _, _, sblock) = check_block allowed_block_set var_table func_table func_return_type block in
+    (var_table, func_table, allowed_block_set, func_return_type, SElifNonEnd(sexpr, sblock_list, sblock))
 
   | ElseEnd(block_list) ->
     let sblock_list = check_block_list allowed_block_set var_table func_table func_return_type block_list in
-    (var_table, func_table, SElseEnd(sblock_list))
+    (var_table, func_table, allowed_block_set, func_return_type, SElseEnd(sblock_list))
 
   | _ -> raise (Failure ("Unsupported block type"))
 (*| InterfaceDefinition

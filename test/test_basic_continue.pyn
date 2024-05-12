@@ -1,7 +1,0 @@
-x : int = 1
-
-while x < 100:
-    print_int(x)
-    break
-    print_int(1)
-    x += 3
