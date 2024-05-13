@@ -1,8 +1,8 @@
 x:int = 10
-if x <= 100:
-    while x != 0 :
-        x -= 1
-        if x == 10 :
-            break
+
+while x != 0 :
+    x -= 1
+    if x == 10 :
+        break
 
 print_int(x)

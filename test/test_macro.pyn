@@ -1,0 +1,3 @@
+@DEFINE THREE 3
+@DEFINE FOUR 4
+print_int(THREE + FOUR)

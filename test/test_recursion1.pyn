@@ -1,8 +1,8 @@
-def rec(n: int) -> int:
+def fib(n: int) -> int:
     if n <= 3:
         return n
     
-    return rec(n - 1) + rec(n - 2)
+    return fib(n - 1) + fib(n - 2)
 
 x: int = 3
-print_int(rec(3))
+print_int(fib(3))

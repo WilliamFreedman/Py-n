@@ -64,10 +64,9 @@ and expr =
   | Binop of expr * bop * expr
   | Walrus of variable * expr
   | FuncCall of variable * expr list
-  | IndexingVar of variable * expr
+  (* | IndexingVar of variable * expr *)
   | IndexingStringLit of string * expr (*todo*)
   | IndexingExprList of expr * expr (*todo*)
-  | Return of expr
 
 type arg = variable * typevar
 type function_signature = variable * arg list * typevar
@@ -78,7 +77,7 @@ type block =
   | Continue
   | Pass
   | VarDec of typevar * variable * expr
-  (** Mostly for assignment expressions (w/ no type decl) **)
+      (** Mostly for assignment expressions (w/ no type decl) **)
   | ReturnVal of expr
   | ReturnVoid
   | While of expr * block list
@@ -177,6 +176,7 @@ and string_of_expr = function
       "{" ^ string_of_expr e1 ^ " : " ^ string_of_expr e2 ^ " for ("
       ^ string_of_var v1 ^ ", " ^ string_of_var v2 ^ ") in " ^ string_of_expr e3
       ^ "}"
+  | _ -> raise (Failure "Unable to run string_of_expr on this expression.")
 
 let rec string_of_typevar = function
   | TypeVariable v -> v

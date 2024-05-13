@@ -233,7 +233,7 @@ and binop_return_type t1 op t2 =
       | TypeVariable "float", TypeVariable "int" -> TypeVariable "float"
       | _, _ -> raise (Failure "Invalid binop types"))
   | LShift | RShift -> (
-    match (t1, t2) with
+      match (t1, t2) with
       | TypeVariable "int", TypeVariable "int" -> TypeVariable "int"
       | _, _ -> raise (Failure "Invalid binop types"))
   | And | Or | Xor -> (
@@ -250,16 +250,16 @@ and binop_return_type t1 op t2 =
       | t1, t2 when t1 = t2 -> t1
       | _, _ -> raise (Failure "Invalid binop types"))
   | FDiv -> (
-    match (t1, t2) with
-    | TypeVariable "int", TypeVariable "int" -> TypeVariable "int"
-    | _, _ -> raise (Failure "Invalid binop types"))
+      match (t1, t2) with
+      | TypeVariable "int", TypeVariable "int" -> TypeVariable "int"
+      | _, _ -> raise (Failure "Invalid binop types"))
   | Mult -> (
-    match (t1, t2) with
-    | TypeVariable "int", TypeVariable "int" -> TypeVariable "int"
-    | TypeVariable "float", TypeVariable "float" -> TypeVariable "float"
-    | TypeVariable "float", TypeVariable "int" -> TypeVariable "float"
-    | TypeVariable "int", TypeVariable "float" -> TypeVariable "float"
-    | _, _ -> raise (Failure "Invalid binop types"))
+      match (t1, t2) with
+      | TypeVariable "int", TypeVariable "int" -> TypeVariable "int"
+      | TypeVariable "float", TypeVariable "float" -> TypeVariable "float"
+      | TypeVariable "float", TypeVariable "int" -> TypeVariable "float"
+      | TypeVariable "int", TypeVariable "float" -> TypeVariable "float"
+      | _, _ -> raise (Failure "Invalid binop types"))
   | Div -> (
       match (t1, t2) with
       | TypeVariable "int", TypeVariable "int" -> TypeVariable "float"
@@ -315,7 +315,7 @@ and (*BlockAssign of variable * special_assignment * expr*)
                ^ ", rvalue: " ^ string_of_typevar t1))
         else SBlockAssign (lvalue, SAssign, binop_sexpr)
   else
-    let bop = assignment_to_bop assign_type in
+    (* let bop = assignment_to_bop assign_type in *)
     let lvalue_type = check_variable symbol_table lvalue in
     let rvalue_sexpr = check_expr symbol_table func_table rvalue in
     match rvalue_sexpr with

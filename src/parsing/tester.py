@@ -33,17 +33,22 @@ def main ():
         ("../../test/test_break_continue.pyn", "../../test/test_break_continue.txt"),
         ("../../test/test_if1.pyn", "../../test/test_if1.txt"),
         ("../../test/test_break_loop1.pyn", "../../test/test_break_loop1.txt"),
-        ("../../test/test_recursion1.pyn", "../../test/test_recursion1.txt")
+        ("../../test/test_recursion1.pyn", "../../test/test_recursion1.txt"),
+        ("../../test/test_macro.pyn", "../../test/test_macro.txt"),
+         ("../../test/test_ops.pyn", "../../test/test_ops.txt")
+        
     ]
-
+    tests_passed = 0
     for in_file, out_file in test_files:
         result, message = tester(in_file, out_file)
         if result:
+            tests_passed += 1
             print ("Test Passes! for file: " + in_file)
         else:
             print("Test failed for: " + in_file)
             print(message)
         print("")
+    print(str(tests_passed) + " out of " + str(len(test_files)) + " tests passed.")
 
 if __name__ == "__main__":
     main()

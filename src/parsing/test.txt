@@ -1,9 +1,0 @@
-def check_pass(grade: int) -> int:
-INDENT     if (grade >= 50):
-INDENT         return 1
-DEDENT     else:
-INDENT         return 0
-DEDENT 
-DEDENT 
-print_int(check_pass(55))
-

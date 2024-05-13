@@ -1,5 +1,0 @@
-x:int = 7 # single line comment
-print_int(x)
-
-# our language does not support multiline comments
-
