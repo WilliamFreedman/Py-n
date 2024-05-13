@@ -1,8 +1,16 @@
 # Py+^n
 
-The language reference manual `LRM` can be found at the following [link](https://docs.google.com/document/d/19qIKJs5IrcalFDOtZ086bfdhxixGeDrwkZcURITzKRQ/edit?usp=sharing):
+## Final Checkpoint
 
-Try running `ocamlbuild scanner.native` in the `src/parsing` directory.
+The link to our video is available here: https://youtu.be/nCTdXWVzS74
+
+To run a Pyn file, run
+
+```
+./pyn_runner.sh <pyn_file_path>
+```
+
+This will run the preprocessor and compilation pipeline and will run the resulting file.
 
 ## Hello World Front-End Checkpoint Update
 
