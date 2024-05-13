@@ -12,6 +12,12 @@ To run a Pyn file, inside the src/parsing directory, run
 
 This will run the preprocessor and compilation pipeline and will run the resulting file.
 
+To run the test suite, inside the src/parsing directory, run
+
+```
+python3 tester.py
+```
+
 ## Hello World Front-End Checkpoint Update
 
 So far, we have completed the scanner and the parser, with a functioning AST pretty printer.
