@@ -4,7 +4,7 @@
 
 The link to our video is available here: https://youtu.be/nCTdXWVzS74
 
-To run a Pyn file, run
+To run a Pyn file, inside the src/parsing directory, run
 
 ```
 ./pyn_runner.sh <pyn_file_path>
